@@ -1,0 +1,82 @@
+{
+  "common": {
+    "retry": "Réessayer"
+  },
+  "nav": {
+    "feed": "Fil",
+    "workout": "Séance",
+    "progress": "Progrès",
+    "me": "Moi"
+  },
+  "auth": {
+    "email": "E-mail",
+    "name": "Nom",
+    "password": "Mot de passe",
+    "passwordHint": "Au moins {{min}} caractères.",
+    "setupTitle": "Créer le compte admin",
+    "setupSubtitle": "Le jeton d'installation est affiché dans les logs du serveur.",
+    "setupToken": "Jeton d'installation",
+    "setupSubmit": "Créer le compte",
+    "loginTitle": "Connexion",
+    "loginSubtitle": "Content de vous revoir.",
+    "loginSubmit": "Se connecter",
+    "inviteTitle": "Rejoindre kipitfit",
+    "inviteSubtitle": "Vous avez été invité. Choisissez un nom et un mot de passe.",
+    "inviteSubmit": "Créer le compte"
+  },
+  "feed": {
+    "emptyTitle": "Rien pour l'instant",
+    "emptyDescription": "Les séances de vos amis s'afficheront ici."
+  },
+  "workout": {
+    "emptyTitle": "Aucune séance",
+    "emptyDescription": "L'enregistrement des séances arrive bientôt."
+  },
+  "progress": {
+    "emptyTitle": "Aucun progrès à afficher",
+    "emptyDescription": "Graphiques et records apparaissent dès vos premières séances."
+  },
+  "me": {
+    "profile": "Profil",
+    "language": "Langue",
+    "unit": "Unité de poids",
+    "saveFailed": "Enregistrement impossible",
+    "invites": "Invitations",
+    "invitesDescription": "kipitfit fonctionne sur invitation. Envoyez le lien à la personne invitée : il sert une fois, pendant 7 jours.",
+    "invite": "Inviter",
+    "inviteLink": "Lien d'invitation, affiché une seule fois :",
+    "copy": "Copier le lien",
+    "copied": "Lien copié",
+    "pending_one": "{{count}} invitation en attente",
+    "pending_many": "{{count}} invitations en attente",
+    "pending_other": "{{count}} invitations en attente",
+    "expires": "Expire le {{date}}",
+    "revoke": "Révoquer l'invitation",
+    "revokeFailed": "Révocation impossible",
+    "signOut": "Se déconnecter"
+  },
+  "errors": {
+    "generic": "Une erreur est survenue",
+    "network": "Serveur injoignable. Vérifiez votre connexion.",
+    "signed_out": "Votre session a pris fin. Reconnectez-vous.",
+    "invalid_credentials": "E-mail ou mot de passe incorrect.",
+    "wrong_setup_token": "Jeton d'installation incorrect. Il est dans les logs du serveur.",
+    "setup_done": "L'installation est déjà faite. Connectez-vous.",
+    "admin_only": "Réservé aux admins.",
+    "invalid_email": "Saisissez une adresse e-mail valide.",
+    "email_taken": "Un compte utilise déjà cet e-mail.",
+    "invalid_invite": "Ce lien d'invitation est invalide, déjà utilisé ou expiré. Demandez-en un nouveau.",
+    "invalid_language": "Choisissez anglais ou français.",
+    "invalid_unit": "Choisissez kg ou lb.",
+    "name_too_long": "Le nom fait au plus {{max}} caractères.",
+    "password_too_short": "Le mot de passe doit faire au moins {{min}} caractères.",
+    "password_too_long": "Le mot de passe fait au plus {{max}} octets.",
+    "cross_origin": "Requête refusée : elle vient d'un autre site.",
+    "too_many_attempts": "Trop de tentatives. Réessayez dans quelques minutes.",
+    "invalid_body": "L'application a envoyé une requête invalide.",
+    "not_found": "Introuvable.",
+    "conflict": "Cela existe déjà.",
+    "invalid": "Saisie invalide.",
+    "internal": "Erreur serveur. Réessayez plus tard."
+  }
+}

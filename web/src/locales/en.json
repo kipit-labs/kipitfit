@@ -1,0 +1,81 @@
+{
+  "common": {
+    "retry": "Retry"
+  },
+  "nav": {
+    "feed": "Feed",
+    "workout": "Workout",
+    "progress": "Progress",
+    "me": "Me"
+  },
+  "auth": {
+    "email": "Email",
+    "name": "Name",
+    "password": "Password",
+    "passwordHint": "At least {{min}} characters.",
+    "setupTitle": "Create the admin account",
+    "setupSubtitle": "The setup token is printed in the server logs.",
+    "setupToken": "Setup token",
+    "setupSubmit": "Create account",
+    "loginTitle": "Sign in",
+    "loginSubtitle": "Welcome back.",
+    "loginSubmit": "Sign in",
+    "inviteTitle": "Join kipitfit",
+    "inviteSubtitle": "You were invited. Pick a name and a password.",
+    "inviteSubmit": "Create account"
+  },
+  "feed": {
+    "emptyTitle": "Nothing here yet",
+    "emptyDescription": "Your friends' workouts will show up here."
+  },
+  "workout": {
+    "emptyTitle": "No workouts yet",
+    "emptyDescription": "Logging workouts is coming next."
+  },
+  "progress": {
+    "emptyTitle": "No progress to show",
+    "emptyDescription": "Charts and records appear once you log workouts."
+  },
+  "me": {
+    "profile": "Profile",
+    "language": "Language",
+    "unit": "Weight unit",
+    "saveFailed": "Couldn't save",
+    "invites": "Invites",
+    "invitesDescription": "kipitfit is invite-only. Send the link to the person you invite; it works once, for 7 days.",
+    "invite": "Invite",
+    "inviteLink": "Invite link, shown only now:",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "pending_one": "{{count}} pending invite",
+    "pending_other": "{{count}} pending invites",
+    "expires": "Expires {{date}}",
+    "revoke": "Revoke invite",
+    "revokeFailed": "Couldn't revoke the invite",
+    "signOut": "Sign out"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "network": "Can't reach the server. Check your connection.",
+    "signed_out": "Your session ended. Sign in again.",
+    "invalid_credentials": "Wrong email or password.",
+    "wrong_setup_token": "Wrong setup token. It is in the server logs.",
+    "setup_done": "Setup is already done. Sign in instead.",
+    "admin_only": "Only admins can do this.",
+    "invalid_email": "Enter a valid email address.",
+    "email_taken": "An account already uses this email.",
+    "invalid_invite": "This invite link is invalid, used or expired. Ask for a new one.",
+    "invalid_language": "Pick English or French.",
+    "invalid_unit": "Pick kg or lb.",
+    "name_too_long": "The name can be at most {{max}} characters.",
+    "password_too_short": "The password needs at least {{min}} characters.",
+    "password_too_long": "The password can be at most {{max}} bytes.",
+    "cross_origin": "Request refused: it came from another site.",
+    "too_many_attempts": "Too many attempts. Try again in a few minutes.",
+    "invalid_body": "The app sent a malformed request.",
+    "not_found": "Not found.",
+    "conflict": "This already exists.",
+    "invalid": "Invalid input.",
+    "internal": "Server error. Try again later."
+  }
+}
