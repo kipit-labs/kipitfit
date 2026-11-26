@@ -77,6 +77,8 @@ export function Exercises() {
           <InputGroupInput
             type="search"
             enterKeyHint="search"
+            // The app's own clear button replaces WebKit's built-in one.
+            className="[&::-webkit-search-cancel-button]:appearance-none"
             aria-label={t("exercises.search")}
             placeholder={t("exercises.search")}
             value={filters.q}
