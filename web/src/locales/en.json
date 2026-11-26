@@ -177,6 +177,13 @@
     "exercise_name_taken": "You already have an exercise with this name.",
     "exercise_name_invalid": "The name needs 1 to {{max}} characters.",
     "exercise_field_invalid": "An exercise field has a value the app doesn't know.",
-    "primary_muscle_required": "Pick at least one primary muscle."
+    "primary_muscle_required": "Pick at least one primary muscle.",
+    "title_invalid": "The name needs 1 to {{max}} characters.",
+    "notes_too_long": "Notes can be at most {{max}} characters.",
+    "too_many_exercises": "A routine or workout holds at most {{max}} exercises.",
+    "too_many_sets": "An exercise holds at most {{max}} sets.",
+    "set_type_invalid": "A set has a type the app doesn't know.",
+    "set_value_invalid": "A set has a value out of range, or one its exercise doesn't take.",
+    "superset_invalid": "A superset is named by one letter, A to Z."
   }
 }
