@@ -1,6 +1,8 @@
 {
   "common": {
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "save": "Enregistrer"
   },
   "nav": {
     "feed": "Fil",
@@ -30,7 +32,9 @@
   },
   "workout": {
     "emptyTitle": "Aucune séance",
-    "emptyDescription": "L'enregistrement des séances arrive bientôt."
+    "emptyDescription": "L'enregistrement des séances arrive bientôt.",
+    "library": "Bibliothèque d'exercices",
+    "libraryDescription": "Parcourez les exercices et créez les vôtres."
   },
   "progress": {
     "emptyTitle": "Aucun progrès à afficher",
@@ -55,6 +59,99 @@
     "revokeFailed": "Révocation impossible",
     "signOut": "Se déconnecter"
   },
+  "exercises": {
+    "title": "Exercices",
+    "search": "Rechercher un exercice",
+    "clearSearch": "Effacer la recherche",
+    "allMuscles": "Tous les muscles",
+    "allEquipment": "Tout le matériel",
+    "allCategories": "Toutes les catégories",
+    "count_one": "{{count}} exercice",
+    "count_many": "{{count}} exercices",
+    "count_other": "{{count}} exercices",
+    "custom": "Perso",
+    "new": "Nouvel exercice",
+    "edit": "Modifier l'exercice",
+    "noResults": "Aucun exercice trouvé",
+    "noResultsDescription": "Essayez d'autres mots ou retirez les filtres.",
+    "clearFilters": "Retirer les filtres",
+    "back": "Exercices",
+    "create": "Créer",
+    "saveFailed": "Impossible d'enregistrer l'exercice",
+    "delete": "Supprimer l'exercice",
+    "deleteTitle": "Supprimer {{name}} ?",
+    "deleteDescription": "Il sera supprimé définitivement.",
+    "deleteConfirm": "Supprimer",
+    "deleteFailed": "Impossible de supprimer l'exercice",
+    "deleted": "Exercice supprimé",
+    "fields": {
+      "name": "Nom",
+      "muscle": "Muscle",
+      "kind": "Suivi",
+      "category": "Catégorie",
+      "equipment": "Matériel",
+      "level": "Niveau",
+      "primaryMuscles": "Muscles principaux",
+      "secondaryMuscles": "Muscles secondaires",
+      "instructions": "Instructions"
+    },
+    "kinds": {
+      "weight_reps": "Poids et répétitions",
+      "reps_only": "Répétitions seules",
+      "weighted_bodyweight": "Poids du corps lesté",
+      "assisted_bodyweight": "Poids du corps assisté",
+      "duration": "Durée",
+      "distance_duration": "Distance et durée"
+    },
+    "categories": {
+      "cardio": "Cardio",
+      "olympic_weightlifting": "Haltérophilie",
+      "plyometrics": "Pliométrie",
+      "powerlifting": "Force athlétique",
+      "strength": "Musculation",
+      "stretching": "Étirements",
+      "strongman": "Strongman"
+    },
+    "equipment": {
+      "bands": "Élastiques",
+      "barbell": "Barre",
+      "body_only": "Poids du corps",
+      "cable": "Poulie",
+      "dumbbell": "Haltères",
+      "exercise_ball": "Ballon de gym",
+      "ez_curl_bar": "Barre EZ",
+      "foam_roll": "Rouleau de massage",
+      "kettlebells": "Kettlebell",
+      "machine": "Machine",
+      "medicine_ball": "Médecine-ball",
+      "none": "Aucun",
+      "other": "Autre"
+    },
+    "muscles": {
+      "abdominals": "Abdominaux",
+      "abductors": "Abducteurs",
+      "adductors": "Adducteurs",
+      "biceps": "Biceps",
+      "calves": "Mollets",
+      "chest": "Pectoraux",
+      "forearms": "Avant-bras",
+      "glutes": "Fessiers",
+      "hamstrings": "Ischio-jambiers",
+      "lats": "Grand dorsal",
+      "lower_back": "Lombaires",
+      "middle_back": "Milieu du dos",
+      "neck": "Cou",
+      "quadriceps": "Quadriceps",
+      "shoulders": "Épaules",
+      "traps": "Trapèzes",
+      "triceps": "Triceps"
+    },
+    "levels": {
+      "beginner": "Débutant",
+      "intermediate": "Intermédiaire",
+      "expert": "Expert"
+    }
+  },
   "errors": {
     "generic": "Une erreur est survenue",
     "network": "Serveur injoignable. Vérifiez votre connexion.",
@@ -77,6 +174,11 @@
     "not_found": "Introuvable.",
     "conflict": "Cela existe déjà.",
     "invalid": "Saisie invalide.",
-    "internal": "Erreur serveur. Réessayez plus tard."
+    "internal": "Erreur serveur. Réessayez plus tard.",
+    "library_exercise_readonly": "Les exercices de la bibliothèque ne peuvent pas être modifiés. Créez le vôtre.",
+    "exercise_name_taken": "Vous avez déjà un exercice avec ce nom.",
+    "exercise_name_invalid": "Le nom doit faire de 1 à {{max}} caractères.",
+    "exercise_field_invalid": "Un champ de l'exercice a une valeur que l'application ne connaît pas.",
+    "primary_muscle_required": "Choisissez au moins un muscle principal."
   }
 }

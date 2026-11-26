@@ -1,6 +1,8 @@
 {
   "common": {
-    "retry": "Retry"
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "nav": {
     "feed": "Feed",
@@ -30,7 +32,9 @@
   },
   "workout": {
     "emptyTitle": "No workouts yet",
-    "emptyDescription": "Logging workouts is coming next."
+    "emptyDescription": "Logging workouts is coming next.",
+    "library": "Exercise library",
+    "libraryDescription": "Browse the exercises and create your own."
   },
   "progress": {
     "emptyTitle": "No progress to show",
@@ -54,6 +58,98 @@
     "revokeFailed": "Couldn't revoke the invite",
     "signOut": "Sign out"
   },
+  "exercises": {
+    "title": "Exercises",
+    "search": "Search exercises",
+    "clearSearch": "Clear search",
+    "allMuscles": "All muscles",
+    "allEquipment": "All equipment",
+    "allCategories": "All categories",
+    "count_one": "{{count}} exercise",
+    "count_other": "{{count}} exercises",
+    "custom": "Custom",
+    "new": "New exercise",
+    "edit": "Edit exercise",
+    "noResults": "No exercise found",
+    "noResultsDescription": "Try other words or clear the filters.",
+    "clearFilters": "Clear filters",
+    "back": "Exercises",
+    "create": "Create",
+    "saveFailed": "Couldn't save the exercise",
+    "delete": "Delete exercise",
+    "deleteTitle": "Delete {{name}}?",
+    "deleteDescription": "It will be gone for good.",
+    "deleteConfirm": "Delete",
+    "deleteFailed": "Couldn't delete the exercise",
+    "deleted": "Exercise deleted",
+    "fields": {
+      "name": "Name",
+      "muscle": "Muscle",
+      "kind": "Tracking",
+      "category": "Category",
+      "equipment": "Equipment",
+      "level": "Level",
+      "primaryMuscles": "Primary muscles",
+      "secondaryMuscles": "Secondary muscles",
+      "instructions": "Instructions"
+    },
+    "kinds": {
+      "weight_reps": "Weight and reps",
+      "reps_only": "Reps only",
+      "weighted_bodyweight": "Weighted bodyweight",
+      "assisted_bodyweight": "Assisted bodyweight",
+      "duration": "Duration",
+      "distance_duration": "Distance and duration"
+    },
+    "categories": {
+      "cardio": "Cardio",
+      "olympic_weightlifting": "Olympic weightlifting",
+      "plyometrics": "Plyometrics",
+      "powerlifting": "Powerlifting",
+      "strength": "Strength",
+      "stretching": "Stretching",
+      "strongman": "Strongman"
+    },
+    "equipment": {
+      "bands": "Bands",
+      "barbell": "Barbell",
+      "body_only": "Bodyweight",
+      "cable": "Cable",
+      "dumbbell": "Dumbbell",
+      "exercise_ball": "Exercise ball",
+      "ez_curl_bar": "EZ curl bar",
+      "foam_roll": "Foam roller",
+      "kettlebells": "Kettlebell",
+      "machine": "Machine",
+      "medicine_ball": "Medicine ball",
+      "none": "None",
+      "other": "Other"
+    },
+    "muscles": {
+      "abdominals": "Abs",
+      "abductors": "Abductors",
+      "adductors": "Adductors",
+      "biceps": "Biceps",
+      "calves": "Calves",
+      "chest": "Chest",
+      "forearms": "Forearms",
+      "glutes": "Glutes",
+      "hamstrings": "Hamstrings",
+      "lats": "Lats",
+      "lower_back": "Lower back",
+      "middle_back": "Middle back",
+      "neck": "Neck",
+      "quadriceps": "Quadriceps",
+      "shoulders": "Shoulders",
+      "traps": "Traps",
+      "triceps": "Triceps"
+    },
+    "levels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "expert": "Expert"
+    }
+  },
   "errors": {
     "generic": "Something went wrong",
     "network": "Can't reach the server. Check your connection.",
@@ -76,6 +172,11 @@
     "not_found": "Not found.",
     "conflict": "This already exists.",
     "invalid": "Invalid input.",
-    "internal": "Server error. Try again later."
+    "internal": "Server error. Try again later.",
+    "library_exercise_readonly": "Library exercises can't be changed. Create your own instead.",
+    "exercise_name_taken": "You already have an exercise with this name.",
+    "exercise_name_invalid": "The name needs 1 to {{max}} characters.",
+    "exercise_field_invalid": "An exercise field has a value the app doesn't know.",
+    "primary_muscle_required": "Pick at least one primary muscle."
   }
 }

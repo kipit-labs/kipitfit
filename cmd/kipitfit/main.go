@@ -58,6 +58,9 @@ func serve() error {
 	if err := c.InitAuth(ctx); err != nil {
 		return err
 	}
+	if err := c.SyncExercises(ctx); err != nil {
+		return err
+	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/", api.New(c, cfg, log))

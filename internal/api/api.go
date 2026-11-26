@@ -40,6 +40,11 @@ func New(c *core.Core, cfg config.Config, log *slog.Logger) *API {
 	mux.HandleFunc("GET /api/admin/invites", a.listInvites)
 	mux.HandleFunc("POST /api/admin/invites", a.createInvite)
 	mux.HandleFunc("DELETE /api/admin/invites/{id}", a.deleteInvite)
+	mux.HandleFunc("GET /api/exercises", a.listExercises)
+	mux.HandleFunc("POST /api/exercises", a.createExercise)
+	mux.HandleFunc("GET /api/exercises/{id}", a.getExercise)
+	mux.HandleFunc("PATCH /api/exercises/{id}", a.updateExercise)
+	mux.HandleFunc("DELETE /api/exercises/{id}", a.deleteExercise)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such endpoint", nil)
 	})
