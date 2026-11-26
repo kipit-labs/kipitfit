@@ -68,7 +68,16 @@ Errors answer `{"error": "...", "code": "...", "params": {...}}`; the app shows 
 | GET | `/api/exercises/{id}` | session | One exercise with its instructions. Another user's exercise is a 404. |
 | POST | `/api/exercises` | session | `{name, kind, category?, equipment?, primaryMuscles, secondaryMuscles?}`: creates your own exercise. |
 | PATCH | `/api/exercises/{id}` | session | Same fields, all optional. Library exercises answer 403 `library_exercise_readonly`. |
-| DELETE | `/api/exercises/{id}` | session | Deletes your own exercise. |
+| DELETE | `/api/exercises/{id}` | session | Deletes your own exercise; one a routine uses is archived instead: hidden from the list, still in routines, its GET says `archived: true`. |
+| GET | `/api/routines` | session | `{folders, routines}` in order; each routine has its `exercises` (with the `exercise` itself, archived too) and target `sets`. |
+| POST | `/api/routines` | session | `{name, notes?, folderId?, exercises: [{exerciseId, superset?, restS?, notes?, sets: [{type, weightG?, repsMin?, repsMax?, durationS?, distanceM?}]}]}`: added after your others. At most 50 exercises and 50 sets each. |
+| PUT | `/api/routines/{id}` | session | Same body: replaces the whole routine. Another user's routine is a 404. |
+| DELETE | `/api/routines/{id}` | session | Deletes a routine. |
+| PUT | `/api/routines/order` | session | `{folders?: [id], routines?: [id]}`: each listed folder or routine takes its index as position. |
+| GET | `/api/folders` | session | Your folders, in order. |
+| POST | `/api/folders` | session | `{name}`: added after your others. |
+| PATCH | `/api/folders/{id}` | session | `{name}`: renames. |
+| DELETE | `/api/folders/{id}` | session | Deletes a folder; its routines stay, in no folder. |
 
 Passwords: 10 characters minimum, 72 bytes maximum (bcrypt).
 
