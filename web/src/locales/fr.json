@@ -179,6 +179,13 @@
     "exercise_name_taken": "Vous avez déjà un exercice avec ce nom.",
     "exercise_name_invalid": "Le nom doit faire de 1 à {{max}} caractères.",
     "exercise_field_invalid": "Un champ de l'exercice a une valeur que l'application ne connaît pas.",
-    "primary_muscle_required": "Choisissez au moins un muscle principal."
+    "primary_muscle_required": "Choisissez au moins un muscle principal.",
+    "title_invalid": "Le nom doit faire de 1 à {{max}} caractères.",
+    "notes_too_long": "Les notes font au plus {{max}} caractères.",
+    "too_many_exercises": "Une routine ou une séance compte au plus {{max}} exercices.",
+    "too_many_sets": "Un exercice compte au plus {{max}} séries.",
+    "set_type_invalid": "Une série a un type inconnu de l'app.",
+    "set_value_invalid": "Une série a une valeur hors limites, ou que son exercice ne prend pas.",
+    "superset_invalid": "Un superset est nommé par une lettre, de A à Z."
   }
 }

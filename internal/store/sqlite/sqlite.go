@@ -197,9 +197,10 @@ func (s *Store) SyncLibrary(ctx context.Context, version string, exs []store.Exe
 func (s *Store) ListExercises(ctx context.Context, ownerID string) ([]store.Exercise, error) {
 	exs := []store.Exercise{}
 	err := s.db.NewSelect().Model(&exs).ExcludeColumn("instructions", "force", "level", "mechanic").
-		Where("owner_id IS NULL OR owner_id = ?", ownerID).OrderExpr("name COLLATE NOCASE").Scan(ctx)
+		Where("owner_id IS NULL OR owner_id = ?", ownerID).Where("archived_at IS NULL").
+		OrderExpr("name COLLATE NOCASE").Scan(ctx)
 	for i := range exs {
-		exs[i].Custom = exs[i].OwnerID != ""
+		flags(&exs[i])
 	}
 	return exs, mapErr(err)
 }
@@ -209,8 +210,12 @@ func (s *Store) GetExercise(ctx context.Context, id string) (store.Exercise, err
 	if err := s.db.NewSelect().Model(&e).Where("id = ?", id).Scan(ctx); err != nil {
 		return store.Exercise{}, mapErr(err)
 	}
-	e.Custom = e.OwnerID != ""
+	flags(&e)
 	return e, nil
+}
+
+func flags(e *store.Exercise) {
+	e.Custom, e.Archived = e.OwnerID != "", !e.ArchivedAt.IsZero()
 }
 
 func (s *Store) CreateExercise(ctx context.Context, e store.Exercise) (store.Exercise, error) {
@@ -240,14 +245,21 @@ func (s *Store) UpdateExercise(ctx context.Context, e store.Exercise) (store.Exe
 }
 
 func (s *Store) DeleteExercise(ctx context.Context, id string) error {
-	res, err := s.db.NewDelete().Model((*store.Exercise)(nil)).Where("id = ?", id).Exec(ctx)
-	if err != nil {
-		return mapErr(err)
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return store.ErrNotFound
-	}
-	return nil
+	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		used, err := tx.NewSelect().Table("routine_exercises").Where("exercise_id = ?", id).Exists(ctx)
+		if err != nil {
+			return err
+		}
+		var res sql.Result
+		if used {
+			// Archiving twice keeps the first date.
+			res, err = tx.NewUpdate().Model((*store.Exercise)(nil)).Where("id = ?", id).
+				Set("archived_at = COALESCE(archived_at, ?)", now()).Exec(ctx)
+		} else {
+			res, err = tx.NewDelete().Model((*store.Exercise)(nil)).Where("id = ?", id).Exec(ctx)
+		}
+		return affected(res, err)
+	})
 }
 
 // nonNilLists keeps JSON columns arrays: a nil slice would be stored as null.
