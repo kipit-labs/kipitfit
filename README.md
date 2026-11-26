@@ -64,6 +64,11 @@ Errors answer `{"error": "...", "code": "...", "params": {...}}`; the app shows 
 | GET | `/api/admin/invites` | admin | Pending invites, newest first. |
 | POST | `/api/admin/invites` | admin | `{email}`: returns the invite with its `link`, shown only once. |
 | DELETE | `/api/admin/invites/{id}` | admin | Revokes an invite. |
+| GET | `/api/exercises` | session | The library and your own exercises, by name, without instructions. Search and filters run in the app. |
+| GET | `/api/exercises/{id}` | session | One exercise with its instructions. Another user's exercise is a 404. |
+| POST | `/api/exercises` | session | `{name, kind, category?, equipment?, primaryMuscles, secondaryMuscles?}`: creates your own exercise. |
+| PATCH | `/api/exercises/{id}` | session | Same fields, all optional. Library exercises answer 403 `library_exercise_readonly`. |
+| DELETE | `/api/exercises/{id}` | session | Deletes your own exercise. |
 
 Passwords: 10 characters minimum, 72 bytes maximum (bcrypt).
 
@@ -74,4 +79,5 @@ Passwords: 10 characters minimum, 72 bytes maximum (bcrypt).
 
 ## License
 
-MIT
+MIT. The exercise library comes from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas
+(Unlicense); see [internal/exercisedb/NOTICE.md](internal/exercisedb/NOTICE.md).

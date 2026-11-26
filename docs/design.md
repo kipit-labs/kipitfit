@@ -58,8 +58,14 @@ mark one kind of set, so colour carries meaning on the set table: **W** warm-up 
 - Duplicate a friend's routine from their workout.
 
 ### Exercises
-- Library seeded from an open dataset: name, equipment, primary and secondary muscles, instructions, images.
-- Search and filter by muscle and equipment; custom exercises per user.
+- Library seeded from an open dataset (all 876 exercises of free-exercise-db, Unlicense): name, category, equipment,
+  level, primary and secondary muscles, instructions. Names stay English for now; muscles, equipment, categories,
+  kinds and levels are translated.
+- Search (words in any order, case and accents ignored) and filters by muscle, equipment and category, run in the app
+  over the whole list; custom exercises per user (name unique per user, case-insensitive). Library rows are read-only.
+- Next: a `name_fr` column with reviewed French names, and a `kipitfit fetch-images` command that downloads the
+  dataset's photos into the data dir once, by hand: the app itself never calls out. Until then a row shows its
+  equipment icon.
 - Per exercise: history, records, rep records 1–12, chart.
 
 ### Progress
@@ -139,7 +145,7 @@ seconds. No floats in the database, so 92.5 kg is always 92 500 and conversion t
 | `users` | email, password_hash, name, unit (kg\|lb), visibility, language, is_admin, plates_g (JSON) | kipitiny's users + settings for units and plates |
 | `sessions`, `invites` | token_hash, user_id / email, expires_at | in the skeleton |
 | `passkeys`, `email_tokens` | as in kipitiny | later |
-| `exercises` | owner_id (NULL = library), slug, name, kind, equipment, primary_muscle, secondary_muscles (JSON), instructions, image | library rows upserted by slug on start; custom rows per user |
+| `exercises` | owner_id (NULL = library), slug, name, kind, category, equipment, primary_muscles / secondary_muscles / instructions (JSON), force, level, mechanic | library rows upserted by slug on start when the embedded dataset changes (`meta.exercise_library_version`), never deleted; custom rows per user |
 | `routine_folders` | user_id, name, position | |
 | `routines` | user_id, folder_id, name, notes, position | |
 | `routine_exercises` | routine_id, exercise_id, position, superset, rest_s, notes | `superset` = group letter, NULL when alone |
@@ -160,7 +166,7 @@ JSON, session cookie. The skeleton's endpoints are in the README; planned ones:
 
 | Method | Path | Does |
 |---|---|---|
-| GET | `/api/exercises?q=&muscle=&equipment=` | library + your custom ones |
+| GET | `/api/exercises` | library + your custom ones, compact; the app searches and filters (876 rows, ~190 kB) |
 | POST PATCH DELETE | `/api/exercises/{id}` | custom exercises only |
 | GET | `/api/exercises/{id}/history` · `/records` · `/series?metric=` | per-exercise sets, records, chart points |
 | GET POST | `/api/routines`, `/api/folders` | list with exercises; create |
@@ -224,7 +230,7 @@ One PR stack per phase.
    tests, login, tab bar. Docker image, CI, release workflow. *Done locally, minus passkeys and mail; still to do: the
    ops repo (namespace, Deployment, Service, Ingress, longhorn PVC, ProtonPassSecret, ArgoCD Application, the namespace
    added to the Velero schedule).*
-3. **Exercise library** — seed loader, search and filters, custom exercises, exercise page without stats.
+3. **Exercise library** — seed loader, search and filters, custom exercises, exercise page without stats. *Done.*
 4. **Routines and the live workout** — folders, routine editor, live workout store on the device, set types,
    supersets, rest timer in the foreground, finish and save. This is the core: it gets the most testing on a real
    iPhone.
