@@ -12,6 +12,8 @@ import i18n from "./i18n";
 import { App } from "./App";
 import { ApiError } from "./lib/api";
 import { errorMessage } from "./lib/errors";
+import { ExerciseDetail } from "./routes/ExerciseDetail";
+import { Exercises } from "./routes/Exercises";
 import { Me } from "./routes/Me";
 import { Feed, Progress, Workout } from "./routes/Placeholders";
 
@@ -48,6 +50,8 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/workout" replace /> },
       { path: "feed", element: <Feed /> },
       { path: "workout", element: <Workout /> },
+      { path: "exercises", element: <Exercises /> },
+      { path: "exercises/:id", element: <ExerciseDetail /> },
       { path: "progress", element: <Progress /> },
       { path: "me", element: <Me /> },
       // App renders the invite page itself.
