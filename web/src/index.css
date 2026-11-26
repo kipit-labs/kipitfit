@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@import "@kipit-labs/kipitidy/theme.css";
+
+/* Coral primary (#ff6b4a). Light mode darkens it so white text on buttons
+   stays readable (about 4.5:1); dark mode uses it as is, with dark text. */
+:root {
+  --primary: oklch(0.56 0.19 35);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.56 0.19 35);
+}
+
+.dark {
+  --primary: oklch(0.7 0.19 35);
+  --primary-foreground: oklch(0.205 0 0);
+  --ring: oklch(0.7 0.19 35);
+}
