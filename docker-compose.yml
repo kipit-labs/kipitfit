@@ -1,0 +1,16 @@
+# Local run of the release image: docker compose up --build, then open
+# http://localhost:8080 and take the setup token from `docker compose logs`.
+services:
+  kipitfit:
+    build: .
+    image: ghcr.io/kipit-labs/kipitfit:dev
+    ports:
+      - "8080:8080"
+    environment:
+      KIPITFIT_APP_URL: http://localhost:8080
+    volumes:
+      - kipitfit-data:/data
+    restart: unless-stopped
+
+volumes:
+  kipitfit-data:
