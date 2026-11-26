@@ -1,8 +1,19 @@
-# kipitfit
+<p align="center"><img src="web/public/icon.svg" alt="" width="96"></p>
 
-A self-hosted workout tracker in the spirit of Hevy: plan routines, log every set at the gym, see your records and
-progress, and follow your friends' training. One Go binary with SQLite and the React app embedded, installed on the
-phone as a PWA. Invite-only, English and French, kg and lb.
+<h1 align="center">kipitfit</h1>
+
+<p align="center">
+  <b>Self-hosted workout tracker.</b><br>
+  Plan routines, log every set at the gym, see your records and progress, and follow your friends' training.
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="docs/design.md">Design</a>
+</p>
+
+One Go binary with SQLite and the React app embedded, installed on the phone as a PWA, in the spirit of Hevy.
+Invite-only, English and French, kg and lb.
 
 **Status: skeleton.** Accounts work (first admin, sign-in, invites, profile). Exercises, routines, workouts,
 records, friends and import come next; see [docs/design.md](docs/design.md) for the plan.
