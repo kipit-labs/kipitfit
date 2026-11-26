@@ -1,6 +1,6 @@
 import { Dumbbell, ChartLine, Rss, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet } from "react-router";
+import { NavLink, Outlet, useLocation } from "react-router";
 import { cn } from "cn";
 
 const tabs = [
@@ -13,6 +13,8 @@ const tabs = [
 /** The signed-in app: one screen at a time over a bottom tab bar. */
 export function Layout() {
   const { t } = useTranslation();
+  // The exercise library is reached from the Workout tab.
+  const inLibrary = useLocation().pathname.startsWith("/exercises");
   return (
     <div className="flex min-h-svh flex-col">
       <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-24">
@@ -27,7 +29,7 @@ export function Layout() {
                 className={({ isActive }) =>
                   cn(
                     "flex h-16 flex-col items-center justify-center gap-1 text-xs text-muted-foreground transition-colors",
-                    isActive && "font-medium text-primary",
+                    (isActive || (inLibrary && to === "/workout")) && "font-medium text-primary",
                   )
                 }
               >
@@ -42,6 +44,6 @@ export function Layout() {
   );
 }
 
-export function PageTitle({ children }: { children: React.ReactNode }) {
-  return <h1 className="mb-6 font-heading text-2xl font-semibold">{children}</h1>;
+export function PageTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <h1 className={cn("mb-6 font-heading text-2xl font-semibold", className)}>{children}</h1>;
 }

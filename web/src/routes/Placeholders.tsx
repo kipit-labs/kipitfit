@@ -1,6 +1,8 @@
-import { Dumbbell, ChartLine, Rss } from "lucide-react";
+import { Dumbbell, ChartLine, ChevronRight, Library, Rss } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import { EmptyState } from "@kipit-labs/kipitidy/empty-state";
+import { IconTile } from "@kipit-labs/kipitidy/icon-tile";
 
 import { PageTitle } from "./Layout";
 
@@ -21,6 +23,14 @@ export function Workout() {
   return (
     <>
       <PageTitle>{t("nav.workout")}</PageTitle>
+      <Link to="/exercises" className="mb-6 flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted">
+        <IconTile icon={Library} />
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">{t("workout.library")}</p>
+          <p className="text-sm text-muted-foreground">{t("workout.libraryDescription")}</p>
+        </div>
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      </Link>
       <EmptyState icon={Dumbbell} title={t("workout.emptyTitle")} description={t("workout.emptyDescription")} />
     </>
   );
