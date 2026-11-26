@@ -146,7 +146,7 @@ seconds. No floats in the database, so 92.5 kg is always 92 500 and conversion t
 | `users` | email, password_hash, name, unit (kg\|lb), visibility, language, is_admin, plates_g (JSON) | kipitiny's users + settings for units and plates |
 | `sessions`, `invites` | token_hash, user_id / email, expires_at | in the skeleton |
 | `passkeys`, `email_tokens` | as in kipitiny | later |
-| `exercises` | owner_id (NULL = library), slug, name, kind, category, equipment, primary_muscles / secondary_muscles / instructions (JSON), force, level, mechanic | library rows upserted by slug on start when the embedded dataset changes (`meta.exercise_library_version`), never deleted; custom rows per user |
+| `exercises` | owner_id (NULL = library), slug, name, kind, category, equipment, primary_muscles / secondary_muscles / instructions (JSON), force, level, mechanic | library rows upserted by slug on start when the embedded dataset changes (`meta.exercise_library_version`), never deleted; custom rows per user, archived (`archived_at`) instead of deleted while a routine or workout uses them |
 | `routine_folders` | user_id, name, position | |
 | `routines` | user_id, folder_id, name, notes, position | |
 | `routine_exercises` | routine_id, exercise_id, position, superset, rest_s, notes | `superset` = group letter, NULL when alone |
@@ -163,15 +163,14 @@ seconds. No floats in the database, so 92.5 kg is always 92 500 and conversion t
 
 ## HTTP API
 
-JSON, session cookie. The skeleton's endpoints are in the README; planned ones:
+JSON, session cookie. The endpoints built so far are in the README (routines: one `PUT` replaces the whole routine,
+simplest for a reorderable editor; `PUT /api/routines/order` reorders folders and routines); planned ones:
 
 | Method | Path | Does |
 |---|---|---|
 | GET | `/api/exercises` | library + your custom ones, compact; the app searches and filters (876 rows, ~190 kB) |
 | POST PATCH DELETE | `/api/exercises/{id}` | custom exercises only |
 | GET | `/api/exercises/{id}/history` · `/records` · `/series?metric=` | per-exercise sets, records, chart points |
-| GET POST | `/api/routines`, `/api/folders` | list with exercises; create |
-| PUT DELETE | `/api/routines/{id}` | replace the whole routine (simplest for a reorderable editor) |
 | GET | `/api/previous?exercise=a,b,c` | last logged sets per exercise, fetched when a workout starts |
 | PUT | `/api/workouts/{id}` | save a finished workout by its phone-made id; returns new records. Same call edits it later |
 | GET | `/api/workouts?after=` · `/api/workouts/{id}` | your history, paged; one workout |
