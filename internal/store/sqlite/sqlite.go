@@ -156,6 +156,110 @@ func (s *Store) DeleteInvite(ctx context.Context, id string) error {
 	return nil
 }
 
+const libraryVersionKey = "exercise_library_version"
+
+func (s *Store) SyncLibrary(ctx context.Context, version string, exs []store.Exercise) (bool, error) {
+	wrote := false
+	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		var current string
+		err := tx.NewSelect().Table("meta").Column("value").Where("key = ?", libraryVersionKey).Scan(ctx, &current)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		if current == version {
+			return nil
+		}
+		rows := make([]store.Exercise, len(exs))
+		t := now()
+		for i, e := range exs {
+			e.ID, e.OwnerID, e.CreatedAt, e.UpdatedAt = ids.New(), "", t, t
+			rows[i] = nonNilLists(e)
+		}
+		// An existing slug keeps its id (workouts will point at it) and gets the new fields.
+		_, err = tx.NewInsert().Model(&rows).
+			On("CONFLICT (slug) DO UPDATE").
+			Set("name = EXCLUDED.name, kind = EXCLUDED.kind, category = EXCLUDED.category, equipment = EXCLUDED.equipment").
+			Set("primary_muscles = EXCLUDED.primary_muscles, secondary_muscles = EXCLUDED.secondary_muscles").
+			Set("force = EXCLUDED.force, level = EXCLUDED.level, mechanic = EXCLUDED.mechanic").
+			Set("instructions = EXCLUDED.instructions, updated_at = EXCLUDED.updated_at").
+			Exec(ctx)
+		if err != nil {
+			return mapErr(err)
+		}
+		_, err = tx.ExecContext(ctx, "INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+			libraryVersionKey, version)
+		wrote = err == nil
+		return err
+	})
+	return wrote, err
+}
+
+func (s *Store) ListExercises(ctx context.Context, ownerID string) ([]store.Exercise, error) {
+	exs := []store.Exercise{}
+	err := s.db.NewSelect().Model(&exs).ExcludeColumn("instructions", "force", "level", "mechanic").
+		Where("owner_id IS NULL OR owner_id = ?", ownerID).OrderExpr("name COLLATE NOCASE").Scan(ctx)
+	for i := range exs {
+		exs[i].Custom = exs[i].OwnerID != ""
+	}
+	return exs, mapErr(err)
+}
+
+func (s *Store) GetExercise(ctx context.Context, id string) (store.Exercise, error) {
+	var e store.Exercise
+	if err := s.db.NewSelect().Model(&e).Where("id = ?", id).Scan(ctx); err != nil {
+		return store.Exercise{}, mapErr(err)
+	}
+	e.Custom = e.OwnerID != ""
+	return e, nil
+}
+
+func (s *Store) CreateExercise(ctx context.Context, e store.Exercise) (store.Exercise, error) {
+	e.ID, e.Slug, e.Custom = ids.New(), "", true
+	e.CreatedAt = now()
+	e.UpdatedAt = e.CreatedAt
+	e = nonNilLists(e)
+	if _, err := s.db.NewInsert().Model(&e).Exec(ctx); err != nil {
+		return store.Exercise{}, mapErr(err)
+	}
+	return e, nil
+}
+
+func (s *Store) UpdateExercise(ctx context.Context, e store.Exercise) (store.Exercise, error) {
+	e.UpdatedAt = now()
+	e = nonNilLists(e)
+	res, err := s.db.NewUpdate().Model(&e).
+		Column("name", "kind", "category", "equipment", "primary_muscles", "secondary_muscles", "updated_at").
+		WherePK().Exec(ctx)
+	if err != nil {
+		return store.Exercise{}, mapErr(err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return store.Exercise{}, store.ErrNotFound
+	}
+	return e, nil
+}
+
+func (s *Store) DeleteExercise(ctx context.Context, id string) error {
+	res, err := s.db.NewDelete().Model((*store.Exercise)(nil)).Where("id = ?", id).Exec(ctx)
+	if err != nil {
+		return mapErr(err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return store.ErrNotFound
+	}
+	return nil
+}
+
+// nonNilLists keeps JSON columns arrays: a nil slice would be stored as null.
+func nonNilLists(e store.Exercise) store.Exercise {
+	for _, l := range []*[]string{&e.PrimaryMuscles, &e.SecondaryMuscles, &e.Instructions} {
+		if *l == nil {
+			*l = []string{}
+		}
+	}
+	return e
+}
+
 func now() time.Time {
 	return time.Now().UTC().Truncate(time.Microsecond)
 }

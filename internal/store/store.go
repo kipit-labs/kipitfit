@@ -36,6 +36,20 @@ type Store interface {
 	// transaction; ErrNotFound for unknown, used or expired invites.
 	AcceptInvite(ctx context.Context, tokenHash string, u User) (User, error)
 	DeleteInvite(ctx context.Context, id string) error
+
+	// SyncLibrary upserts the library exercises by slug, in one transaction,
+	// unless version is the one last synced; it never deletes a library row.
+	// It reports whether it wrote anything.
+	SyncLibrary(ctx context.Context, version string, exs []Exercise) (bool, error)
+	// ListExercises returns the library and ownerID's custom exercises by
+	// name, without instructions, force, level and mechanic.
+	ListExercises(ctx context.Context, ownerID string) ([]Exercise, error)
+	GetExercise(ctx context.Context, id string) (Exercise, error)
+	// CreateExercise and UpdateExercise return ErrConflict when the owner
+	// already has a custom exercise with that name (ASCII case ignored).
+	CreateExercise(ctx context.Context, e Exercise) (Exercise, error)
+	UpdateExercise(ctx context.Context, e Exercise) (Exercise, error)
+	DeleteExercise(ctx context.Context, id string) error
 }
 
 type Unit string
@@ -78,4 +92,41 @@ type Invite struct {
 	CreatedAt time.Time  `bun:"created_at" json:"createdAt"`
 	ExpiresAt time.Time  `bun:"expires_at" json:"expiresAt"`
 	UsedAt    *time.Time `bun:"used_at" json:"usedAt,omitempty"`
+}
+
+// Kind is what a set of the exercise records.
+type Kind string
+
+const (
+	KindWeightReps         Kind = "weight_reps"
+	KindRepsOnly           Kind = "reps_only"
+	KindWeightedBodyweight Kind = "weighted_bodyweight"
+	KindAssistedBodyweight Kind = "assisted_bodyweight"
+	KindDuration           Kind = "duration"
+	KindDistanceDuration   Kind = "distance_duration"
+)
+
+// Exercise is a library exercise (OwnerID "", Slug set) or a user's custom one.
+// Category, equipment, muscles, force, level and mechanic are snake_case keys
+// the web app translates.
+type Exercise struct {
+	bun.BaseModel `bun:"table:exercises,alias:ex" json:"-"`
+
+	ID               string    `bun:"id,pk" json:"id"`
+	OwnerID          string    `bun:"owner_id,nullzero" json:"-"`
+	Slug             string    `bun:"slug,nullzero" json:"-"`
+	Name             string    `bun:"name" json:"name"`
+	Kind             Kind      `bun:"kind" json:"kind"`
+	Category         string    `bun:"category" json:"category"`
+	Equipment        string    `bun:"equipment" json:"equipment"`
+	PrimaryMuscles   []string  `bun:"primary_muscles,type:json" json:"primaryMuscles"`
+	SecondaryMuscles []string  `bun:"secondary_muscles,type:json" json:"secondaryMuscles"`
+	Force            string    `bun:"force" json:"force,omitempty"`
+	Level            string    `bun:"level" json:"level,omitempty"`
+	Mechanic         string    `bun:"mechanic" json:"mechanic,omitempty"`
+	Instructions     []string  `bun:"instructions,type:json" json:"instructions,omitempty"`
+	CreatedAt        time.Time `bun:"created_at" json:"-"`
+	UpdatedAt        time.Time `bun:"updated_at" json:"-"`
+	// Custom is set by the store: the exercise belongs to a user.
+	Custom bool `bun:"-" json:"custom"`
 }
