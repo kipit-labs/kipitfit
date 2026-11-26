@@ -161,6 +161,34 @@ func TestErrorCodesTranslated(t *testing.T) {
 	}
 }
 
+// TestExerciseLabelsTranslated checks every exercise enum value the API can
+// return has a label in each web catalog; the web looks them up dynamically.
+func TestExerciseLabelsTranslated(t *testing.T) {
+	enums := map[string][]string{"categories": core.Categories, "equipment": core.Equipment, "muscles": core.Muscles, "levels": core.Levels}
+	for _, k := range core.Kinds {
+		enums["kinds"] = append(enums["kinds"], string(k))
+	}
+	for _, lang := range []string{"en", "fr"} {
+		raw, err := os.ReadFile(filepath.Join("..", "..", "web", "src", "locales", lang+".json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var cat struct{ Exercises map[string]json.RawMessage }
+		if err := json.Unmarshal(raw, &cat); err != nil {
+			t.Fatalf("%s.json: %v", lang, err)
+		}
+		for group, values := range enums {
+			var labels map[string]string
+			_ = json.Unmarshal(cat.Exercises[group], &labels)
+			for _, v := range values {
+				if labels[v] == "" {
+					t.Errorf("%s.json: missing exercises.%s.%s", lang, group, v)
+				}
+			}
+		}
+	}
+}
+
 func TestRealIP(t *testing.T) {
 	cluster := []netip.Prefix{netip.MustParsePrefix("10.42.0.0/16")}
 	tests := []struct {
