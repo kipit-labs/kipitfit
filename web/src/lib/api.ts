@@ -1,3 +1,5 @@
+import type { LoggedSet, WorkoutBody } from "@/live/model";
+
 export class ApiError extends Error {
   readonly status: number;
   /** Names the error for the UI, which shows errors.<code> in its language. */
@@ -110,9 +112,11 @@ export type Routine = {
   name: string;
   notes: string;
   exercises: RoutineExercise[];
+  /** When its latest workout ended; null if never done. */
+  lastDoneAt?: string | null;
 };
 
-export type RoutineInput = Omit<Routine, "id">;
+export type RoutineInput = Omit<Routine, "id" | "lastDoneAt">;
 
 export const api = {
   authState: () => request<AuthState>("/auth/state"),
@@ -137,4 +141,7 @@ export const api = {
   createFolder: (name: string) => send<Folder>("POST", "/folders", { name }),
   renameFolder: (id: string, name: string) => send<Folder>("PATCH", `/folders/${id}`, { name }),
   deleteFolder: (id: string) => send<void>("DELETE", `/folders/${id}`),
+  putWorkout: (id: string, b: WorkoutBody) => send<unknown>("PUT", `/workouts/${id}`, b),
+  previous: (exerciseIds: string[]) =>
+    request<Record<string, LoggedSet[]>>(`/previous?exercise=${exerciseIds.map(encodeURIComponent).join(",")}`),
 };
