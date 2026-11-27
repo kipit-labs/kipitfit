@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -34,7 +34,7 @@ func TestExercises(t *testing.T) {
 		t.Fatalf("library: %d, %v", len(library), err)
 	}
 
-	in := ExerciseInput{Name: ptr("  Landmine   Press "), Kind: ptr(store.KindWeightReps), Equipment: ptr("barbell"),
+	in := ExerciseInput{Name: ptr("  Landmine   Press "), Kind: ptr(domain.KindWeightReps), Equipment: ptr("barbell"),
 		PrimaryMuscles: &[]string{"shoulders", "shoulders"}}
 	e, err := c.CreateExercise(ctx, admin, in)
 	if err != nil {
@@ -55,7 +55,7 @@ func TestExercises(t *testing.T) {
 		"blank name":   {ExerciseInput{Name: ptr("   "), Kind: in.Kind, PrimaryMuscles: in.PrimaryMuscles}, ErrExerciseName},
 		"long name":    {ExerciseInput{Name: ptr(string(make([]rune, 101))), Kind: in.Kind}, ErrExerciseName},
 		"no kind":      {ExerciseInput{Name: ptr("X"), PrimaryMuscles: in.PrimaryMuscles}, ErrExerciseField},
-		"bad kind":     {ExerciseInput{Name: ptr("X"), Kind: ptr(store.Kind("lift")), PrimaryMuscles: in.PrimaryMuscles}, ErrExerciseField},
+		"bad kind":     {ExerciseInput{Name: ptr("X"), Kind: ptr(domain.Kind("lift")), PrimaryMuscles: in.PrimaryMuscles}, ErrExerciseField},
 		"bad category": {ExerciseInput{Name: ptr("X"), Kind: in.Kind, Category: ptr("yoga"), PrimaryMuscles: in.PrimaryMuscles}, ErrExerciseField},
 		"bad muscle":   {ExerciseInput{Name: ptr("X"), Kind: in.Kind, PrimaryMuscles: &[]string{"heart"}}, ErrExerciseField},
 		"no muscle":    {ExerciseInput{Name: ptr("X"), Kind: in.Kind, PrimaryMuscles: &[]string{}}, ErrPrimaryMuscleEmpty},
@@ -66,13 +66,13 @@ func TestExercises(t *testing.T) {
 	}
 
 	// The friend can't see, change or delete the admin's exercise, and can't change the library.
-	if _, err := c.GetExercise(ctx, friend, e.ID); !errors.Is(err, store.ErrNotFound) {
+	if _, err := c.GetExercise(ctx, friend, e.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("friend get: %v", err)
 	}
-	if _, err := c.UpdateExercise(ctx, friend, e.ID, ExerciseInput{Name: ptr("Mine")}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := c.UpdateExercise(ctx, friend, e.ID, ExerciseInput{Name: ptr("Mine")}); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("friend update: %v", err)
 	}
-	if err := c.DeleteExercise(ctx, friend, e.ID); !errors.Is(err, store.ErrNotFound) {
+	if err := c.DeleteExercise(ctx, friend, e.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("friend delete: %v", err)
 	}
 	if _, err := c.UpdateExercise(ctx, friend, library[0].ID, ExerciseInput{Name: ptr("Mine")}); !errors.Is(err, ErrLibraryReadonly) {
@@ -85,8 +85,8 @@ func TestExercises(t *testing.T) {
 		t.Errorf("friend sees %d, want the library only", len(list))
 	}
 
-	e, err = c.UpdateExercise(ctx, admin, e.ID, ExerciseInput{SecondaryMuscles: &[]string{"triceps"}, Kind: ptr(store.KindWeightedBodyweight)})
-	if err != nil || e.SecondaryMuscles[0] != "triceps" || e.Kind != store.KindWeightedBodyweight || e.Name != "Landmine Press" {
+	e, err = c.UpdateExercise(ctx, admin, e.ID, ExerciseInput{SecondaryMuscles: &[]string{"triceps"}, Kind: ptr(domain.KindWeightedBodyweight)})
+	if err != nil || e.SecondaryMuscles[0] != "triceps" || e.Kind != domain.KindWeightedBodyweight || e.Name != "Landmine Press" {
 		t.Errorf("update = %+v, %v", e, err)
 	}
 	if _, err := c.UpdateExercise(ctx, admin, e.ID, ExerciseInput{PrimaryMuscles: &[]string{}}); !errors.Is(err, ErrPrimaryMuscleEmpty) {

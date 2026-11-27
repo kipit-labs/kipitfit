@@ -8,34 +8,34 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 const InviteTTL = 7 * 24 * time.Hour
 
 // Profile is a change to the signed-in user's own settings; nil fields stay.
 type Profile struct {
-	Name     *string     `json:"name"`
-	Language *string     `json:"language"`
-	Unit     *store.Unit `json:"unit"`
+	Name     *string      `json:"name"`
+	Language *string      `json:"language"`
+	Unit     *domain.Unit `json:"unit"`
 }
 
-func (c *Core) UpdateMe(ctx context.Context, me store.User, p Profile) (store.User, error) {
+func (c *Core) UpdateMe(ctx context.Context, me domain.User, p Profile) (domain.User, error) {
 	if p.Name != nil {
 		me.Name = strings.TrimSpace(*p.Name)
 		if utf8.RuneCountInString(me.Name) > maxNameLength {
-			return store.User{}, ErrNameTooLong
+			return domain.User{}, ErrNameTooLong
 		}
 	}
 	if p.Language != nil {
 		if l := *p.Language; l != "" && l != "en" && l != "fr" {
-			return store.User{}, ErrInvalidLanguage
+			return domain.User{}, ErrInvalidLanguage
 		}
 		me.Language = *p.Language
 	}
 	if p.Unit != nil {
-		if *p.Unit != store.UnitKg && *p.Unit != store.UnitLb {
-			return store.User{}, ErrInvalidUnit
+		if *p.Unit != domain.UnitKg && *p.Unit != domain.UnitLb {
+			return domain.User{}, ErrInvalidUnit
 		}
 		me.Unit = *p.Unit
 	}
@@ -45,11 +45,11 @@ func (c *Core) UpdateMe(ctx context.Context, me store.User, p Profile) (store.Us
 // InviteLink is a new invite with the link to hand to the person; the link
 // can't be shown again (only its hash is stored).
 type InviteLink struct {
-	store.Invite
+	domain.Invite
 	Link string `json:"link"`
 }
 
-func (c *Core) CreateInvite(ctx context.Context, me store.User, email string) (InviteLink, error) {
+func (c *Core) CreateInvite(ctx context.Context, me domain.User, email string) (InviteLink, error) {
 	if !me.IsAdmin {
 		return InviteLink{}, ErrNotAdmin
 	}
@@ -59,11 +59,11 @@ func (c *Core) CreateInvite(ctx context.Context, me store.User, email string) (I
 	}
 	if _, err := c.store.GetUserByEmail(ctx, email); err == nil {
 		return InviteLink{}, ErrEmailTaken
-	} else if !errors.Is(err, store.ErrNotFound) {
+	} else if !errors.Is(err, domain.ErrNotFound) {
 		return InviteLink{}, err
 	}
 	token := randomToken(32)
-	i, err := c.store.CreateInvite(ctx, store.Invite{
+	i, err := c.store.CreateInvite(ctx, domain.Invite{
 		TokenHash: hashToken(token),
 		Email:     email,
 		CreatedBy: me.ID,
@@ -75,14 +75,14 @@ func (c *Core) CreateInvite(ctx context.Context, me store.User, email string) (I
 	return InviteLink{Invite: i, Link: c.cfg.AppURL + "/invite?token=" + url.QueryEscape(token)}, nil
 }
 
-func (c *Core) ListInvites(ctx context.Context, me store.User) ([]store.Invite, error) {
+func (c *Core) ListInvites(ctx context.Context, me domain.User) ([]domain.Invite, error) {
 	if !me.IsAdmin {
 		return nil, ErrNotAdmin
 	}
 	return c.store.ListInvites(ctx)
 }
 
-func (c *Core) DeleteInvite(ctx context.Context, me store.User, id string) error {
+func (c *Core) DeleteInvite(ctx context.Context, me domain.User, id string) error {
 	if !me.IsAdmin {
 		return ErrNotAdmin
 	}
@@ -90,19 +90,19 @@ func (c *Core) DeleteInvite(ctx context.Context, me store.User, id string) error
 }
 
 // AcceptInvite creates the invited account and returns it with a session token.
-func (c *Core) AcceptInvite(ctx context.Context, token, name, password string) (store.User, string, error) {
-	u, err := newUser("", name, password)
+func (c *Core) AcceptInvite(ctx context.Context, token, name, password string) (domain.User, string, error) {
+	u, err := c.newUser("", name, password)
 	if err != nil {
-		return store.User{}, "", err
+		return domain.User{}, "", err
 	}
 	u, err = c.store.AcceptInvite(ctx, hashToken(token), u)
 	switch {
-	case errors.Is(err, store.ErrNotFound):
-		return store.User{}, "", ErrInvalidInvite
-	case errors.Is(err, store.ErrConflict): // the email got an account since
-		return store.User{}, "", ErrEmailTaken
+	case errors.Is(err, domain.ErrNotFound):
+		return domain.User{}, "", ErrInvalidInvite
+	case errors.Is(err, domain.ErrConflict): // the email got an account since
+		return domain.User{}, "", ErrEmailTaken
 	case err != nil:
-		return store.User{}, "", err
+		return domain.User{}, "", err
 	}
 	session, err := c.newSession(ctx, u.ID)
 	return u, session, err

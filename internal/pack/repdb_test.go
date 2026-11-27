@@ -7,10 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/kipit-labs/kipitfit/internal/core"
-	"github.com/kipit-labs/kipitfit/internal/media"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/pack"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
 // A made-up pack in RepDB's free-tier shape; no real RepDB data is in the repo.
@@ -61,27 +59,27 @@ func TestRepDBFree(t *testing.T) {
 	if p.Name != "repdb-free" || p.Version != "2026-11-14T121104Z" || p.Credit != "Exercise data by RepDB (repdb.co)" || len(p.Exercises) != 7 {
 		t.Fatalf("pack = %+v (%d exercises)", p.Pack, len(p.Exercises))
 	}
-	by := map[string]pack.Exercise{}
+	by := map[string]domain.PackExercise{}
 	for _, e := range p.Exercises {
 		by[e.Slug] = e
 		for _, list := range [][]string{e.PrimaryMuscles, e.SecondaryMuscles} {
 			for _, m := range list {
-				if !slices.Contains(core.Muscles, m) {
+				if !slices.Contains(domain.Muscles, m) {
 					t.Errorf("%s: muscle %q isn't a kipitfit key", e.Slug, m)
 				}
 			}
 		}
-		if !slices.Contains(core.Equipment, e.Equipment) || !slices.Contains(core.Categories, e.Category) || !slices.Contains(core.Kinds, e.Kind) {
+		if !slices.Contains(domain.Equipment, e.Equipment) || !slices.Contains(domain.Categories, e.Category) || !slices.Contains(domain.Kinds, e.Kind) {
 			t.Errorf("%s: unknown key in %+v", e.Slug, e.Exercise)
 		}
 		for _, f := range e.Files {
-			if !media.ValidKey(f.Key) {
+			if !domain.ValidMediaKey(f.Key) {
 				t.Errorf("%s: key %q not servable", e.Slug, f.Key)
 			}
 		}
 	}
 	sq := by["repdb:squat"]
-	if sq.Name != "Barbell Back Squat" || sq.Kind != store.KindWeightReps || sq.Level != "expert" || sq.Force != "push" ||
+	if sq.Name != "Barbell Back Squat" || sq.Kind != domain.KindWeightReps || sq.Level != "expert" || sq.Force != "push" ||
 		!slices.Equal(sq.PrimaryMuscles, []string{"glutes", "quadriceps"}) || !slices.Equal(sq.SecondaryMuscles, []string{"lower_back"}) ||
 		len(sq.Files) != 2 || sq.Files[0].Key != "packs/repdb-free/2026-11-14T121104Z/squat-start.webp" || sq.Files[0].ContentType != "image/webp" {
 		t.Errorf("squat = %+v", sq)
@@ -91,16 +89,16 @@ func TestRepDBFree(t *testing.T) {
 		t.Errorf("squat peak = %q", b)
 	}
 	for slug, want := range map[string]struct {
-		kind      store.Kind
+		kind      domain.Kind
 		equipment string
 		files     int
 	}{
-		"repdb:plank":      {store.KindDuration, "body_only", 1},
-		"repdb:pull-up":    {store.KindRepsOnly, "body_only", 1},
-		"repdb:ball-plank": {store.KindDuration, "exercise_ball", 0},
-		"repdb:row":        {store.KindDistanceDuration, "machine", 0},
-		"repdb:clean":      {store.KindWeightReps, "machine", 0},
-		"repdb:..evil":     {store.KindWeightReps, "other", 0}, // "/" dropped from the id
+		"repdb:plank":      {domain.KindDuration, "body_only", 1},
+		"repdb:pull-up":    {domain.KindRepsOnly, "body_only", 1},
+		"repdb:ball-plank": {domain.KindDuration, "exercise_ball", 0},
+		"repdb:row":        {domain.KindDistanceDuration, "machine", 0},
+		"repdb:clean":      {domain.KindWeightReps, "machine", 0},
+		"repdb:..evil":     {domain.KindWeightReps, "other", 0}, // "/" dropped from the id
 	} {
 		e := by[slug]
 		if e.Kind != want.kind || e.Equipment != want.equipment || len(e.Files) != want.files {

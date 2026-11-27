@@ -11,10 +11,10 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/core"
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
-// Codes the API itself answers with, next to core.Codes; each needs a
+// Codes the API itself answers with, next to domain.Codes; each needs a
 // translation under errors.<code> in web/src/locales.
 var apiCodes = []string{"cross_origin", "too_many_attempts", "invalid_body", "not_found", "conflict", "invalid", "internal"}
 
@@ -76,25 +76,25 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) { a.handler.Serv
 type userKey struct{}
 
 // user is the signed-in user protect put on the request.
-func user(r *http.Request) store.User {
-	u, _ := r.Context().Value(userKey{}).(store.User)
+func user(r *http.Request) domain.User {
+	u, _ := r.Context().Value(userKey{}).(domain.User)
 	return u
 }
 
-func withUser(ctx context.Context, u store.User) context.Context {
+func withUser(ctx context.Context, u domain.User) context.Context {
 	return context.WithValue(ctx, userKey{}, u)
 }
 
 func (a *API) fail(w http.ResponseWriter, err error) {
-	var ce *core.Error
+	var ce *domain.Error
 	switch {
 	case errors.As(err, &ce):
 		writeError(w, status(ce.Kind), ce.Code, ce.Msg, ce.Params)
-	case errors.Is(err, core.ErrInvalid):
+	case errors.Is(err, domain.ErrInvalid):
 		writeError(w, http.StatusBadRequest, "invalid", err.Error(), nil)
-	case errors.Is(err, store.ErrNotFound):
+	case errors.Is(err, domain.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "not found", nil)
-	case errors.Is(err, store.ErrConflict):
+	case errors.Is(err, domain.ErrConflict):
 		writeError(w, http.StatusConflict, "conflict", "already exists", nil)
 	default:
 		a.log.Error("request failed", "err", err)
@@ -104,11 +104,11 @@ func (a *API) fail(w http.ResponseWriter, err error) {
 
 func status(kind error) int {
 	switch {
-	case errors.Is(kind, core.ErrUnauthorized):
+	case errors.Is(kind, domain.ErrUnauthorized):
 		return http.StatusUnauthorized
-	case errors.Is(kind, core.ErrForbidden):
+	case errors.Is(kind, domain.ErrForbidden):
 		return http.StatusForbidden
-	case errors.Is(kind, core.ErrConflict):
+	case errors.Is(kind, domain.ErrConflict):
 		return http.StatusConflict
 	default:
 		return http.StatusBadRequest

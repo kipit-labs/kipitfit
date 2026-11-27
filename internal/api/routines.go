@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/kipit-labs/kipitfit/internal/core"
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 func (a *API) listRoutines(w http.ResponseWriter, r *http.Request) {
@@ -13,7 +13,7 @@ func (a *API) listRoutines(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) createRoutine(w http.ResponseWriter, r *http.Request) {
-	var in store.Routine
+	var in domain.Routine
 	if !decode(w, r, &in) {
 		return
 	}
@@ -22,7 +22,7 @@ func (a *API) createRoutine(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) updateRoutine(w http.ResponseWriter, r *http.Request) {
-	var in store.Routine
+	var in domain.Routine
 	if !decode(w, r, &in) {
 		return
 	}

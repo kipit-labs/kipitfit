@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/exercisedb"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
 // RepDB's muscles, equipment, categories and levels onto kipitfit's keys.
@@ -64,32 +64,32 @@ type repdbFile struct {
 }
 
 // readRepDBFree reads RepDB's free tier: free.json and images/flat/<id>-<frame>.webp.
-func readRepDBFree(z *zip.Reader) (Pack, error) {
+func readRepDBFree(z *zip.Reader) (domain.ParsedPack, error) {
 	f, ok := file(z, "free.json", "")
 	if !ok {
-		return Pack{}, fmt.Errorf("free.json not in the ZIP: is this RepDB's free download?")
+		return domain.ParsedPack{}, fmt.Errorf("free.json not in the ZIP: is this RepDB's free download?")
 	}
 	r, err := f.Open()
 	if err != nil {
-		return Pack{}, err
+		return domain.ParsedPack{}, err
 	}
 	defer r.Close()
 	var data repdbFile
 	if err := json.NewDecoder(r).Decode(&data); err != nil {
-		return Pack{}, fmt.Errorf("free.json: %w", err)
+		return domain.ParsedPack{}, fmt.Errorf("free.json: %w", err)
 	}
 	version := keySafe(data.GeneratedAt)
 	if version == "" || len(data.Exercises) == 0 {
-		return Pack{}, fmt.Errorf("free.json: no version or no exercises")
+		return domain.ParsedPack{}, fmt.Errorf("free.json: no version or no exercises")
 	}
-	p := Pack{Pack: store.Pack{Name: "repdb-free", Version: version,
+	p := domain.ParsedPack{Pack: domain.Pack{Name: "repdb-free", Version: version,
 		Credit: "Exercise data by RepDB (repdb.co)", CreditURL: "https://repdb.co"}}
 	for _, x := range data.Exercises {
 		id := keySafe(x.ID)
 		if id == "" || x.Name == "" {
 			continue
 		}
-		e := Exercise{Exercise: store.Exercise{
+		e := domain.PackExercise{Exercise: domain.Exercise{
 			Slug: "repdb:" + id, Name: x.Name, Category: repdbCategories[x.Category],
 			Mechanic: x.Mechanic, Level: repdbLevels[x.Difficulty], Instructions: x.Instructions,
 		}}

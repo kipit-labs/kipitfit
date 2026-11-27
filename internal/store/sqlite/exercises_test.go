@@ -5,18 +5,18 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
-func libraryRow(slug, name string) store.Exercise {
-	return store.Exercise{Slug: slug, Name: name, Kind: store.KindWeightReps, Category: "strength", Equipment: "barbell",
+func libraryRow(slug, name string) domain.Exercise {
+	return domain.Exercise{Slug: slug, Name: name, Kind: domain.KindWeightReps, Category: "strength", Equipment: "barbell",
 		PrimaryMuscles: []string{"chest"}, Instructions: []string{"Lie down.", "Press."}}
 }
 
 func TestSyncLibrary(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
-	v1 := []store.Exercise{libraryRow("bench", "Bench Press"), libraryRow("squat", "Squat")}
+	v1 := []domain.Exercise{libraryRow("bench", "Bench Press"), libraryRow("squat", "Squat")}
 	if wrote, err := s.SyncLibrary(ctx, "v1", v1); err != nil || !wrote {
 		t.Fatalf("first sync: wrote=%v err=%v", wrote, err)
 	}
@@ -29,7 +29,7 @@ func TestSyncLibrary(t *testing.T) {
 	}
 
 	// v2 renames bench and drops squat: same id, squat kept.
-	if _, err := s.SyncLibrary(ctx, "v2", []store.Exercise{libraryRow("bench", "Bench Press (Barbell)")}); err != nil {
+	if _, err := s.SyncLibrary(ctx, "v2", []domain.Exercise{libraryRow("bench", "Bench Press (Barbell)")}); err != nil {
 		t.Fatal(err)
 	}
 	after, err := s.ListExercises(ctx, "")
@@ -51,19 +51,19 @@ func TestSyncLibrary(t *testing.T) {
 func TestCustomExercises(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
-	a, _ := s.CreateUser(ctx, store.User{Email: "a@b.c", PasswordHash: "h"})
-	b, _ := s.CreateUser(ctx, store.User{Email: "b@b.c", PasswordHash: "h"})
-	if _, err := s.SyncLibrary(ctx, "v1", []store.Exercise{libraryRow("bench", "Bench Press")}); err != nil {
+	a, _ := s.CreateUser(ctx, domain.User{Email: "a@b.c", PasswordHash: "h"})
+	b, _ := s.CreateUser(ctx, domain.User{Email: "b@b.c", PasswordHash: "h"})
+	if _, err := s.SyncLibrary(ctx, "v1", []domain.Exercise{libraryRow("bench", "Bench Press")}); err != nil {
 		t.Fatal(err)
 	}
-	mine := store.Exercise{OwnerID: a.ID, Name: "Landmine Press", Kind: store.KindWeightReps, Category: "strength",
+	mine := domain.Exercise{OwnerID: a.ID, Name: "Landmine Press", Kind: domain.KindWeightReps, Category: "strength",
 		Equipment: "barbell", PrimaryMuscles: []string{"shoulders"}}
 	e, err := s.CreateExercise(ctx, mine)
 	if err != nil || !e.Custom || e.SecondaryMuscles == nil {
 		t.Fatalf("create = %+v, %v", e, err)
 	}
 	mine.Name = "landmine PRESS"
-	if _, err := s.CreateExercise(ctx, mine); !errors.Is(err, store.ErrConflict) {
+	if _, err := s.CreateExercise(ctx, mine); !errors.Is(err, domain.ErrConflict) {
 		t.Errorf("same name, other case: err = %v", err)
 	}
 	mine.OwnerID = b.ID
@@ -71,7 +71,7 @@ func TestCustomExercises(t *testing.T) {
 		t.Errorf("same name, other owner: %v", err)
 	}
 	// Library names don't block custom ones.
-	if _, err := s.CreateExercise(ctx, store.Exercise{OwnerID: a.ID, Name: "Bench Press", Kind: store.KindRepsOnly,
+	if _, err := s.CreateExercise(ctx, domain.Exercise{OwnerID: a.ID, Name: "Bench Press", Kind: domain.KindRepsOnly,
 		Category: "strength", Equipment: "none", PrimaryMuscles: []string{"chest"}}); err != nil {
 		t.Errorf("custom named like a library one: %v", err)
 	}
@@ -96,10 +96,10 @@ func TestCustomExercises(t *testing.T) {
 	if err := s.DeleteExercise(ctx, e.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.DeleteExercise(ctx, e.ID); !errors.Is(err, store.ErrNotFound) {
+	if err := s.DeleteExercise(ctx, e.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("second delete: %v", err)
 	}
-	if _, err := s.UpdateExercise(ctx, e); !errors.Is(err, store.ErrNotFound) {
+	if _, err := s.UpdateExercise(ctx, e); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("update deleted: %v", err)
 	}
 }

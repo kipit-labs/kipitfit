@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 func (a *API) putWorkout(w http.ResponseWriter, r *http.Request) {
-	var in store.Workout
+	var in domain.Workout
 	if !decode(w, r, &in) {
 		return
 	}

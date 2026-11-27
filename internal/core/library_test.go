@@ -7,26 +7,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
 	"github.com/kipit-labs/kipitfit/internal/media"
-	"github.com/kipit-labs/kipitfit/internal/pack"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
-func testPack() pack.Pack {
-	file := func(key string) pack.File {
-		return pack.File{Key: key, ContentType: "image/webp", Size: 4,
+func testPack() domain.ParsedPack {
+	file := func(key string) domain.PackFile {
+		return domain.PackFile{Key: key, ContentType: "image/webp", Size: 4,
 			Open: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("webp")), nil }}
 	}
-	ex := func(slug, name string, kind store.Kind, files ...pack.File) pack.Exercise {
-		return pack.Exercise{Exercise: store.Exercise{Slug: slug, Name: name, Kind: kind, Category: "strength",
+	ex := func(slug, name string, kind domain.Kind, files ...domain.PackFile) domain.PackExercise {
+		return domain.PackExercise{Exercise: domain.Exercise{Slug: slug, Name: name, Kind: kind, Category: "strength",
 			Equipment: "barbell", PrimaryMuscles: []string{"glutes"}}, Files: files}
 	}
-	return pack.Pack{Pack: store.Pack{Name: "test", Version: "1", Credit: "Exercise data by Test"}, Exercises: []pack.Exercise{
-		ex("test:deadlift", "barbell  deadlift", store.KindWeightReps, file("packs/test/1/deadlift-start.webp"), file("packs/test/1/deadlift-peak.webp")),
-		ex("test:plank", "Plank", store.KindDuration, file("packs/test/1/plank-main.webp")),
+	return domain.ParsedPack{Pack: domain.Pack{Name: "test", Version: "1", Credit: "Exercise data by Test"}, Exercises: []domain.PackExercise{
+		ex("test:deadlift", "barbell  deadlift", domain.KindWeightReps, file("packs/test/1/deadlift-start.webp"), file("packs/test/1/deadlift-peak.webp")),
+		ex("test:plank", "Plank", domain.KindDuration, file("packs/test/1/plank-main.webp")),
 		// Same name as a built-in one, other kind: its sets wouldn't fit.
-		ex("test:situp", "3/4 Sit-Up", store.KindWeightReps),
+		ex("test:situp", "3/4 Sit-Up", domain.KindWeightReps),
 	}}
 }
 
@@ -39,26 +38,26 @@ func TestImportPack(t *testing.T) {
 	m := media.NewMemory()
 	c.media = m
 
-	builtin := map[string]store.Exercise{}
+	builtin := map[string]domain.Exercise{}
 	exs, _ := c.ListExercises(ctx, me)
 	for _, e := range exs {
 		builtin[e.Name] = e
 	}
 	dead, situp, squat := builtin["Barbell Deadlift"], builtin["3/4 Sit-Up"], builtin["Barbell Squat"]
-	custom, err := c.CreateExercise(ctx, me, ExerciseInput{Name: ptr("Landmine Press"), Kind: ptr(store.KindWeightReps), PrimaryMuscles: &[]string{"shoulders"}})
+	custom, err := c.CreateExercise(ctx, me, ExerciseInput{Name: ptr("Landmine Press"), Kind: ptr(domain.KindWeightReps), PrimaryMuscles: &[]string{"shoulders"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, err := c.CreateRoutine(ctx, me, store.Routine{Name: "Pull", Exercises: []store.RoutineExercise{{ExerciseID: dead.ID}, {ExerciseID: situp.ID}}})
+	r, err := c.CreateRoutine(ctx, me, domain.Routine{Name: "Pull", Exercises: []domain.RoutineExercise{{ExerciseID: dead.ID}, {ExerciseID: situp.ID}}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	start := time.Date(2026, 11, 20, 18, 0, 0, 0, time.UTC)
 	wid := ids.New()
-	_, err = c.PutWorkout(ctx, me, wid, store.Workout{Title: "Pull", StartedAt: start, EndedAt: start.Add(time.Hour), Exercises: []store.WorkoutExercise{
-		{ExerciseID: dead.ID, Sets: []store.WorkoutSet{{Type: store.SetNormal, WeightG: ptr(100000), Reps: ptr(5)}}},
-		{ExerciseID: situp.ID, Sets: []store.WorkoutSet{{Type: store.SetNormal, Reps: ptr(20)}}},
-		{ExerciseID: custom.ID, Sets: []store.WorkoutSet{{Type: store.SetNormal, WeightG: ptr(20000), Reps: ptr(10)}}},
+	_, err = c.PutWorkout(ctx, me, wid, domain.Workout{Title: "Pull", StartedAt: start, EndedAt: start.Add(time.Hour), Exercises: []domain.WorkoutExercise{
+		{ExerciseID: dead.ID, Sets: []domain.WorkoutSet{{Type: domain.SetNormal, WeightG: ptr(100000), Reps: ptr(5)}}},
+		{ExerciseID: situp.ID, Sets: []domain.WorkoutSet{{Type: domain.SetNormal, Reps: ptr(20)}}},
+		{ExerciseID: custom.ID, Sets: []domain.WorkoutSet{{Type: domain.SetNormal, WeightG: ptr(20000), Reps: ptr(10)}}},
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +72,7 @@ func TestImportPack(t *testing.T) {
 		t.Fatalf("import = %+v", res)
 	}
 	exs, _ = c.ListExercises(ctx, me)
-	names := map[string]store.Exercise{}
+	names := map[string]domain.Exercise{}
 	for _, e := range exs {
 		names[e.Name] = e
 	}
@@ -93,8 +92,8 @@ func TestImportPack(t *testing.T) {
 	if old, err := c.GetExercise(ctx, me, squat.ID); err != nil || !old.Archived {
 		t.Fatalf("old built-in = %+v, %v", old, err)
 	}
-	if _, err := c.PutWorkout(ctx, me, ids.New(), store.Workout{Title: "Legs", StartedAt: start, EndedAt: start.Add(time.Hour),
-		Exercises: []store.WorkoutExercise{{ExerciseID: squat.ID, Sets: []store.WorkoutSet{{Type: store.SetNormal, WeightG: ptr(80000), Reps: ptr(5)}}}}}); err != nil {
+	if _, err := c.PutWorkout(ctx, me, ids.New(), domain.Workout{Title: "Legs", StartedAt: start, EndedAt: start.Add(time.Hour),
+		Exercises: []domain.WorkoutExercise{{ExerciseID: squat.ID, Sets: []domain.WorkoutSet{{Type: domain.SetNormal, WeightG: ptr(80000), Reps: ptr(5)}}}}}); err != nil {
 		t.Fatalf("workout on an archived built-in: %v", err)
 	}
 	if l, _ := c.Library(ctx); l.Pack == nil || l.Pack.Credit != "Exercise data by Test" || !l.Media {

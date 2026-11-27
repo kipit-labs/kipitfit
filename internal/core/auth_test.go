@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/kipit-labs/kipitfit/internal/config"
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
+	"github.com/kipit-labs/kipitfit/internal/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
 )
 
@@ -24,14 +26,14 @@ func newCore(t *testing.T) (*Core, *sqlite.Store) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = st.Close() })
-	c := New(config.Config{SetupToken: "setup", AppURL: "https://fit.example"}, st, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	c := New(config.Config{SetupToken: "setup", AppURL: "https://fit.example"}, st, security.NewBcryptHasher(0), exercisedb.Dataset{}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err := c.InitAuth(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	return c, st
 }
 
-func newAdmin(t *testing.T, c *Core) store.User {
+func newAdmin(t *testing.T, c *Core) domain.User {
 	t.Helper()
 	u, _, err := c.Setup(context.Background(), "setup", "Admin@Example.com ", "Admin", pw)
 	if err != nil {
@@ -84,7 +86,7 @@ func TestLogin(t *testing.T) {
 	if err := c.Logout(ctx, token); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.Authenticate(ctx, token); !errors.Is(err, ErrUnauthorized) {
+	if _, err := c.Authenticate(ctx, token); !errors.Is(err, domain.ErrUnauthorized) {
 		t.Fatalf("after logout: err = %v", err)
 	}
 }
@@ -125,15 +127,15 @@ func TestInvites(t *testing.T) {
 		t.Fatalf("used invite: err = %v", err)
 	}
 
-	if _, err := c.CreateInvite(ctx, friend, "x@example.com"); !errors.Is(err, ErrForbidden) {
+	if _, err := c.CreateInvite(ctx, friend, "x@example.com"); !errors.Is(err, domain.ErrForbidden) {
 		t.Fatalf("non-admin invite: err = %v", err)
 	}
-	if _, err := c.ListInvites(ctx, friend); !errors.Is(err, ErrForbidden) {
+	if _, err := c.ListInvites(ctx, friend); !errors.Is(err, domain.ErrForbidden) {
 		t.Fatalf("non-admin list: err = %v", err)
 	}
 
 	// An expired invite is refused.
-	if _, err := st.CreateInvite(ctx, store.Invite{TokenHash: hashToken("late"), Email: "late@example.com", CreatedBy: admin.ID, ExpiresAt: time.Now().Add(-time.Minute)}); err != nil {
+	if _, err := st.CreateInvite(ctx, domain.Invite{TokenHash: hashToken("late"), Email: "late@example.com", CreatedBy: admin.ID, ExpiresAt: time.Now().Add(-time.Minute)}); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := c.AcceptInvite(ctx, "late", "Late", pw); !errors.Is(err, ErrInvalidInvite) {
@@ -149,7 +151,7 @@ func TestUpdateMe(t *testing.T) {
 	if _, err := c.UpdateMe(ctx, admin, Profile{Language: &bad}); !errors.Is(err, ErrInvalidLanguage) {
 		t.Fatalf("language de: err = %v", err)
 	}
-	fr, lb := "fr", store.UnitLb
+	fr, lb := "fr", domain.UnitLb
 	u, err := c.UpdateMe(ctx, admin, Profile{Language: &fr, Unit: &lb})
 	if err != nil || u.Language != "fr" || u.Unit != lb || u.Name != "Admin" {
 		t.Fatalf("UpdateMe = %+v, %v", u, err)

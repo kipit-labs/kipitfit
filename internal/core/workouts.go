@@ -8,7 +8,7 @@ import (
 	"slices"
 	"unicode/utf8"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 const (
@@ -18,11 +18,11 @@ const (
 )
 
 var (
-	ErrWorkoutID    = coded(ErrInvalid, "workout_id_invalid", "a workout id is a ULID made on the phone")
-	ErrWorkoutTimes = coded(ErrInvalid, "workout_times_invalid", "a workout ends after it starts, within a day")
-	ErrWorkoutEmpty = coded(ErrInvalid, "workout_empty", "log at least one set")
-	ErrSetMissing   = coded(ErrInvalid, "set_value_missing", "a set is missing a value its exercise needs")
-	ErrRPE          = coded(ErrInvalid, "rpe_invalid", "RPE goes from 6 to 10 in steps of 0.5")
+	ErrWorkoutID    = domain.Coded(domain.ErrInvalid, "workout_id_invalid", "a workout id is a ULID made on the phone")
+	ErrWorkoutTimes = domain.Coded(domain.ErrInvalid, "workout_times_invalid", "a workout ends after it starts, within a day")
+	ErrWorkoutEmpty = domain.Coded(domain.ErrInvalid, "workout_empty", "log at least one set")
+	ErrSetMissing   = domain.Coded(domain.ErrInvalid, "set_value_missing", "a set is missing a value its exercise needs")
+	ErrRPE          = domain.Coded(domain.ErrInvalid, "rpe_invalid", "RPE goes from 6 to 10 in steps of 0.5")
 )
 
 var ulidRE = regexp.MustCompile(`^[0-9A-HJKMNP-TV-Z]{26}$`)
@@ -30,7 +30,7 @@ var ulidRE = regexp.MustCompile(`^[0-9A-HJKMNP-TV-Z]{26}$`)
 // PutWorkout saves a finished workout under its phone-made id: created the
 // first time, replaced after, so a finish sent twice saves once.
 // The answer carries the records it beat.
-func (c *Core) PutWorkout(ctx context.Context, me store.User, id string, w store.Workout) (WorkoutView, error) {
+func (c *Core) PutWorkout(ctx context.Context, me domain.User, id string, w domain.Workout) (WorkoutView, error) {
 	if !ulidRE.MatchString(id) {
 		return WorkoutView{}, ErrWorkoutID
 	}
@@ -48,7 +48,7 @@ func (c *Core) PutWorkout(ctx context.Context, me store.User, id string, w store
 	w.StartedAt, w.EndedAt = w.StartedAt.UTC(), w.EndedAt.UTC()
 	if w.RoutineID != "" {
 		// The routine may have been deleted while the finish waited for signal: save anyway.
-		if _, err := c.store.GetRoutine(ctx, me.ID, w.RoutineID); errors.Is(err, store.ErrNotFound) {
+		if _, err := c.store.GetRoutine(ctx, me.ID, w.RoutineID); errors.Is(err, domain.ErrNotFound) {
 			w.RoutineID = ""
 		} else if err != nil {
 			return WorkoutView{}, err
@@ -95,8 +95,8 @@ func (c *Core) PutWorkout(ctx context.Context, me store.User, id string, w store
 
 // checkSet validates a logged set: the values its exercise takes, the ones it
 // needs (the weight of a bodyweight exercise is optional), and the RPE.
-func checkSet(k store.Kind, s store.WorkoutSet) error {
-	if !slices.Contains(SetTypes, s.Type) {
+func checkSet(k domain.Kind, s domain.WorkoutSet) error {
+	if !slices.Contains(domain.SetTypes, s.Type) {
 		return ErrSetType
 	}
 	f := fieldsOf(k)
@@ -104,7 +104,7 @@ func checkSet(k store.Kind, s store.WorkoutSet) error {
 		!value(s.DurationS, f.duration, maxDurationS) || !value(s.DistanceM, f.distance, maxDistanceM) {
 		return ErrSetValue
 	}
-	if (k == store.KindWeightReps && s.WeightG == nil) || (f.reps && s.Reps == nil) ||
+	if (k == domain.KindWeightReps && s.WeightG == nil) || (f.reps && s.Reps == nil) ||
 		(f.duration && s.DurationS == nil) || (f.distance && s.DistanceM == nil) {
 		return ErrSetMissing
 	}
@@ -117,9 +117,9 @@ func checkSet(k store.Kind, s store.WorkoutSet) error {
 // volume is the weight moved by a set that isn't a warm-up: the added weight
 // for a weighted bodyweight exercise, nothing for an assisted one (P7 counts
 // the bodyweight).
-func volume(k store.Kind, s store.WorkoutSet) int {
-	if s.Type == store.SetWarmup || s.WeightG == nil || s.Reps == nil ||
-		(k != store.KindWeightReps && k != store.KindWeightedBodyweight) {
+func volume(k domain.Kind, s domain.WorkoutSet) int {
+	if s.Type == domain.SetWarmup || s.WeightG == nil || s.Reps == nil ||
+		(k != domain.KindWeightReps && k != domain.KindWeightedBodyweight) {
 		return 0
 	}
 	return *s.WeightG * *s.Reps
@@ -132,7 +132,7 @@ type Workouts struct {
 	Next     string        `json:"next,omitempty"`
 }
 
-func (c *Core) ListWorkouts(ctx context.Context, me store.User, after string) (Workouts, error) {
+func (c *Core) ListWorkouts(ctx context.Context, me domain.User, after string) (Workouts, error) {
 	ws, err := c.store.ListWorkouts(ctx, me.ID, after, workoutsPage+1)
 	if err != nil {
 		return Workouts{}, err
@@ -146,7 +146,7 @@ func (c *Core) ListWorkouts(ctx context.Context, me store.User, after string) (W
 	return page, err
 }
 
-func (c *Core) GetWorkout(ctx context.Context, me store.User, id string) (WorkoutView, error) {
+func (c *Core) GetWorkout(ctx context.Context, me domain.User, id string) (WorkoutView, error) {
 	w, err := c.store.GetWorkout(ctx, me.ID, id)
 	if err != nil {
 		return WorkoutView{}, err
@@ -154,22 +154,22 @@ func (c *Core) GetWorkout(ctx context.Context, me store.User, id string) (Workou
 	return c.workoutView(ctx, me, w)
 }
 
-func (c *Core) workoutView(ctx context.Context, me store.User, w store.Workout) (WorkoutView, error) {
-	vs, err := c.withRecords(ctx, me, []store.Workout{w})
+func (c *Core) workoutView(ctx context.Context, me domain.User, w domain.Workout) (WorkoutView, error) {
+	vs, err := c.withRecords(ctx, me, []domain.Workout{w})
 	if err != nil {
 		return WorkoutView{}, err
 	}
 	return vs[0], nil
 }
 
-func (c *Core) DeleteWorkout(ctx context.Context, me store.User, id string) error {
+func (c *Core) DeleteWorkout(ctx context.Context, me domain.User, id string) error {
 	return c.store.DeleteWorkout(ctx, me.ID, id)
 }
 
 // PreviousSets returns the sets of each exercise in me's latest workout with it.
-func (c *Core) PreviousSets(ctx context.Context, me store.User, exerciseIDs []string) (map[string][]store.WorkoutSet, error) {
+func (c *Core) PreviousSets(ctx context.Context, me domain.User, exerciseIDs []string) (map[string][]domain.WorkoutSet, error) {
 	if len(exerciseIDs) > maxExercises {
-		return nil, fmt.Errorf("%w: at most %d exercises", ErrInvalid, maxExercises)
+		return nil, fmt.Errorf("%w: at most %d exercises", domain.ErrInvalid, maxExercises)
 	}
 	return c.store.PreviousSets(ctx, me.ID, exerciseIDs)
 }

@@ -8,32 +8,32 @@ import (
 
 	"github.com/uptrace/bun"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
-func (s *Store) LibraryPack(ctx context.Context) (store.Pack, error) {
+func (s *Store) LibraryPack(ctx context.Context) (domain.Pack, error) {
 	var raw string
 	err := s.db.NewSelect().Table("meta").Column("value").Where("key = ?", libraryPackKey).Scan(ctx, &raw)
 	if errors.Is(err, sql.ErrNoRows) {
-		return store.Pack{}, store.ErrNotFound
+		return domain.Pack{}, domain.ErrNotFound
 	}
 	if err != nil {
-		return store.Pack{}, err
+		return domain.Pack{}, err
 	}
-	var p store.Pack
+	var p domain.Pack
 	return p, json.Unmarshal([]byte(raw), &p)
 }
 
-func (s *Store) ReplaceLibrary(ctx context.Context, p store.Pack, exs []store.Exercise, repoint map[string]string) (store.Replaced, error) {
-	res := store.Replaced{Exercises: len(exs)}
+func (s *Store) ReplaceLibrary(ctx context.Context, p domain.Pack, exs []domain.Exercise, repoint map[string]string) (domain.Replaced, error) {
+	res := domain.Replaced{Exercises: len(exs)}
 	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		rows := make([]store.Exercise, len(exs))
+		rows := make([]exerciseRow, len(exs))
 		slugs := make([]string, len(exs))
 		t := now()
 		for i, e := range exs {
 			e.ID, e.OwnerID, e.CreatedAt, e.UpdatedAt = ids.New(), "", t, t
-			rows[i], slugs[i] = nonNilLists(e), e.Slug
+			rows[i], slugs[i] = newExerciseRow(e), e.Slug
 		}
 		// An existing slug keeps its id and comes back if an earlier import archived it.
 		_, err := tx.NewInsert().Model(&rows).
@@ -60,7 +60,7 @@ func (s *Store) ReplaceLibrary(ctx context.Context, p store.Pack, exs []store.Ex
 		}
 		// The rest of the old library is archived, not deleted: a workout under
 		// way on a phone still holds its ids, and must still save.
-		r, err := tx.NewUpdate().Model((*store.Exercise)(nil)).Set("archived_at = ?", t).
+		r, err := tx.NewUpdate().Model((*exerciseRow)(nil)).Set("archived_at = ?", t).
 			Where("owner_id IS NULL").Where("slug NOT IN (?)", bun.List(slugs)).Where("archived_at IS NULL").Exec(ctx)
 		if err != nil {
 			return err

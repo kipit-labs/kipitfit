@@ -15,6 +15,9 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/core"
+	"github.com/kipit-labs/kipitfit/internal/domain"
+	"github.com/kipit-labs/kipitfit/internal/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
 	"github.com/kipit-labs/kipitfit/internal/media"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
 )
@@ -36,7 +39,7 @@ func newAPIMedia(t *testing.T) (*API, *media.Memory) {
 	cfg := config.Config{SetupToken: "setup", AppURL: "http://example.com"}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	m := media.NewMemory()
-	c := core.New(cfg, st, m, log)
+	c := core.New(cfg, st, security.NewBcryptHasher(0), exercisedb.Dataset{}, m, log)
 	if err := c.InitAuth(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +165,7 @@ func TestErrorCodesTranslated(t *testing.T) {
 		if err := json.Unmarshal(raw, &cat); err != nil {
 			t.Fatalf("%s.json: %v", lang, err)
 		}
-		for _, c := range append(append([]string{}, core.Codes...), apiCodes...) {
+		for _, c := range append(append([]string{}, domain.Codes...), apiCodes...) {
 			if cat.Errors[c] == "" {
 				t.Errorf("%s.json: missing errors.%s", lang, c)
 			}
@@ -173,8 +176,8 @@ func TestErrorCodesTranslated(t *testing.T) {
 // TestExerciseLabelsTranslated checks every exercise enum value the API can
 // return has a label in each web catalog; the web looks them up dynamically.
 func TestExerciseLabelsTranslated(t *testing.T) {
-	enums := map[string][]string{"categories": core.Categories, "equipment": core.Equipment, "muscles": core.Muscles, "levels": core.Levels}
-	for _, k := range core.Kinds {
+	enums := map[string][]string{"categories": domain.Categories, "equipment": domain.Equipment, "muscles": domain.Muscles, "levels": domain.Levels}
+	for _, k := range domain.Kinds {
 		enums["kinds"] = append(enums["kinds"], string(k))
 	}
 	for _, lang := range []string{"en", "fr"} {

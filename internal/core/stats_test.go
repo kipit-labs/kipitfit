@@ -6,27 +6,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
 func TestStats(t *testing.T) {
 	ctx := context.Background()
 	c, me, friend := twoUsers(t)
-	lift := byKind(t, c, me, store.KindWeightReps)
+	lift := byKind(t, c, me, domain.KindWeightReps)
 	at := time.Now().UTC().Truncate(time.Second).Add(-48 * time.Hour)
-	put := func(start time.Time, sets ...store.WorkoutSet) {
+	put := func(start time.Time, sets ...domain.WorkoutSet) {
 		t.Helper()
-		if _, err := c.PutWorkout(ctx, me, ids.New(), store.Workout{Title: "Push", StartedAt: start, EndedAt: start.Add(time.Hour),
-			Exercises: []store.WorkoutExercise{{ExerciseID: lift.ID, Sets: sets}}}); err != nil {
+		if _, err := c.PutWorkout(ctx, me, ids.New(), domain.Workout{Title: "Push", StartedAt: start, EndedAt: start.Add(time.Hour),
+			Exercises: []domain.WorkoutExercise{{ExerciseID: lift.ID, Sets: sets}}}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	put(at.AddDate(0, 0, -30), store.WorkoutSet{Type: store.SetNormal, WeightG: ptr(50000), Reps: ptr(5)})
+	put(at.AddDate(0, 0, -30), domain.WorkoutSet{Type: domain.SetNormal, WeightG: ptr(50000), Reps: ptr(5)})
 	put(at,
-		store.WorkoutSet{Type: store.SetWarmup, WeightG: ptr(40000), Reps: ptr(10)},
-		store.WorkoutSet{Type: store.SetNormal, WeightG: ptr(100000), Reps: ptr(5)},
-		store.WorkoutSet{Type: store.SetNormal, WeightG: ptr(100000), Reps: ptr(5)})
+		domain.WorkoutSet{Type: domain.SetWarmup, WeightG: ptr(40000), Reps: ptr(10)},
+		domain.WorkoutSet{Type: domain.SetNormal, WeightG: ptr(100000), Reps: ptr(5)},
+		domain.WorkoutSet{Type: domain.SetNormal, WeightG: ptr(100000), Reps: ptr(5)})
 
 	st, err := c.Stats(ctx, me, at.AddDate(0, 0, -7))
 	if err != nil || len(st) != 1 {

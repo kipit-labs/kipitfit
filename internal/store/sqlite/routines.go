@@ -6,53 +6,59 @@ import (
 
 	"github.com/uptrace/bun"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
-func (s *Store) ListFolders(ctx context.Context, userID string) ([]store.Folder, error) {
-	fs := []store.Folder{}
-	err := s.db.NewSelect().Model(&fs).Where("user_id = ?", userID).Order("position", "id").Scan(ctx)
+func (s *Store) ListFolders(ctx context.Context, userID string) ([]domain.Folder, error) {
+	var rows []folderRow
+	err := s.db.NewSelect().Model(&rows).Where("user_id = ?", userID).Order("position", "id").Scan(ctx)
+	fs := make([]domain.Folder, len(rows))
+	for i, r := range rows {
+		fs[i] = r.domain()
+	}
 	return fs, mapErr(err)
 }
 
-func (s *Store) CreateFolder(ctx context.Context, f store.Folder) (store.Folder, error) {
-	f.ID, f.CreatedAt = ids.New(), now()
-	_, err := s.db.NewInsert().Model(&f).
+func (s *Store) CreateFolder(ctx context.Context, f domain.Folder) (domain.Folder, error) {
+	row := folderRow{ID: ids.New(), UserID: f.UserID, Name: f.Name, CreatedAt: now()}
+	_, err := s.db.NewInsert().Model(&row).
 		Value("position", "(SELECT COALESCE(MAX(position) + 1, 0) FROM routine_folders WHERE user_id = ?)", f.UserID).
 		Returning("position").Exec(ctx)
-	return f, mapErr(err)
+	return row.domain(), mapErr(err)
 }
 
-func (s *Store) RenameFolder(ctx context.Context, f store.Folder) error {
-	res, err := s.db.NewUpdate().Model(&f).Column("name").Where("id = ? AND user_id = ?", f.ID, f.UserID).Exec(ctx)
+func (s *Store) RenameFolder(ctx context.Context, f domain.Folder) error {
+	row := folderRow{ID: f.ID, UserID: f.UserID, Name: f.Name}
+	res, err := s.db.NewUpdate().Model(&row).Column("name").Where("id = ? AND user_id = ?", f.ID, f.UserID).Exec(ctx)
 	return affected(res, err)
 }
 
 func (s *Store) DeleteFolder(ctx context.Context, userID, id string) error {
-	res, err := s.db.NewDelete().Model((*store.Folder)(nil)).Where("id = ? AND user_id = ?", id, userID).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*folderRow)(nil)).Where("id = ? AND user_id = ?", id, userID).Exec(ctx)
 	return affected(res, err)
 }
 
-func (s *Store) ListRoutines(ctx context.Context, userID string) ([]store.Routine, error) {
-	rs := []store.Routine{}
-	err := routines(s.db, &rs).Where("r.user_id = ?", userID).Order("r.position", "r.id").Scan(ctx)
-	fillRoutines(rs)
+func (s *Store) ListRoutines(ctx context.Context, userID string) ([]domain.Routine, error) {
+	var rows []routineRow
+	err := routines(s.db, &rows).Where("r.user_id = ?", userID).Order("r.position", "r.id").Scan(ctx)
+	rs := make([]domain.Routine, len(rows))
+	for i, r := range rows {
+		rs[i] = r.domain()
+	}
 	return rs, mapErr(err)
 }
 
-func (s *Store) GetRoutine(ctx context.Context, userID, id string) (store.Routine, error) {
+func (s *Store) GetRoutine(ctx context.Context, userID, id string) (domain.Routine, error) {
 	return getRoutine(ctx, s.db, userID, id)
 }
 
-func getRoutine(ctx context.Context, db bun.IDB, userID, id string) (store.Routine, error) {
-	var r store.Routine
+func getRoutine(ctx context.Context, db bun.IDB, userID, id string) (domain.Routine, error) {
+	var r routineRow
 	if err := routines(db, &r).Where("r.id = ? AND r.user_id = ?", id, userID).Scan(ctx); err != nil {
-		return store.Routine{}, mapErr(err)
+		return domain.Routine{}, mapErr(err)
 	}
-	rs := []store.Routine{r}
-	fillRoutines(rs)
-	return rs[0], nil
+	return r.domain(), nil
 }
 
 // routines selects into model with each routine's exercises and sets in order.
@@ -66,28 +72,12 @@ func routines(db bun.IDB, model any) *bun.SelectQuery {
 		Relation("Exercises.Sets", func(q *bun.SelectQuery) *bun.SelectQuery { return q.Order("rs.position") })
 }
 
-func fillRoutines(rs []store.Routine) {
-	for i := range rs {
-		for j := range rs[i].Exercises {
-			re := &rs[i].Exercises[j]
-			if re.Exercise != nil {
-				flags(re.Exercise)
-			}
-			if re.Sets == nil {
-				re.Sets = []store.RoutineSet{}
-			}
-		}
-		if rs[i].Exercises == nil {
-			rs[i].Exercises = []store.RoutineExercise{}
-		}
-	}
-}
-
-func (s *Store) CreateRoutine(ctx context.Context, r store.Routine) (store.Routine, error) {
+func (s *Store) CreateRoutine(ctx context.Context, r domain.Routine) (domain.Routine, error) {
 	r.ID, r.CreatedAt = ids.New(), now()
 	r.UpdatedAt = r.CreatedAt
 	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		_, err := tx.NewInsert().Model(&r).
+		row := newRoutineRow(r)
+		_, err := tx.NewInsert().Model(&row).
 			Value("position", "(SELECT COALESCE(MAX(position) + 1, 0) FROM routines WHERE user_id = ?)", r.UserID).
 			Exec(ctx)
 		if err != nil {
@@ -102,16 +92,17 @@ func (s *Store) CreateRoutine(ctx context.Context, r store.Routine) (store.Routi
 	return r, err
 }
 
-func (s *Store) UpdateRoutine(ctx context.Context, r store.Routine) (store.Routine, error) {
+func (s *Store) UpdateRoutine(ctx context.Context, r domain.Routine) (domain.Routine, error) {
 	r.UpdatedAt = now()
 	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		res, err := tx.NewUpdate().Model(&r).Column("folder_id", "name", "notes", "updated_at").
+		row := newRoutineRow(r)
+		res, err := tx.NewUpdate().Model(&row).Column("folder_id", "name", "notes", "updated_at").
 			Where("id = ? AND user_id = ?", r.ID, r.UserID).Exec(ctx)
 		if err := affected(res, err); err != nil {
 			return err
 		}
 		// The sets go with their exercises (ON DELETE CASCADE).
-		if _, err := tx.NewDelete().Model((*store.RoutineExercise)(nil)).Where("routine_id = ?", r.ID).Exec(ctx); err != nil {
+		if _, err := tx.NewDelete().Model((*routineExerciseRow)(nil)).Where("routine_id = ?", r.ID).Exec(ctx); err != nil {
 			return err
 		}
 		if err := insertExercises(ctx, tx, r); err != nil {
@@ -124,20 +115,21 @@ func (s *Store) UpdateRoutine(ctx context.Context, r store.Routine) (store.Routi
 }
 
 // insertExercises writes r's exercises and sets at their positions in r.
-func insertExercises(ctx context.Context, tx bun.Tx, r store.Routine) error {
+func insertExercises(ctx context.Context, tx bun.Tx, r domain.Routine) error {
 	if len(r.Exercises) == 0 {
 		return nil
 	}
-	sets := []store.RoutineSet{}
-	for i := range r.Exercises {
-		re := &r.Exercises[i]
-		re.ID, re.RoutineID, re.Position = ids.New(), r.ID, i
+	exs := make([]routineExerciseRow, len(r.Exercises))
+	sets := []routineSetRow{}
+	for i, re := range r.Exercises {
+		exs[i] = routineExerciseRow{ID: ids.New(), RoutineID: r.ID, ExerciseID: re.ExerciseID, Position: i,
+			Superset: re.Superset, RestS: re.RestS, Notes: re.Notes}
 		for j, set := range re.Sets {
-			set.RoutineExerciseID, set.Position = re.ID, j
-			sets = append(sets, set)
+			sets = append(sets, routineSetRow{RoutineExerciseID: exs[i].ID, Position: j, Type: set.Type, WeightG: set.WeightG,
+				RepsMin: set.RepsMin, RepsMax: set.RepsMax, DurationS: set.DurationS, DistanceM: set.DistanceM})
 		}
 	}
-	if _, err := tx.NewInsert().Model(&r.Exercises).Exec(ctx); err != nil {
+	if _, err := tx.NewInsert().Model(&exs).Exec(ctx); err != nil {
 		return mapErr(err)
 	}
 	if len(sets) > 0 {
@@ -149,7 +141,7 @@ func insertExercises(ctx context.Context, tx bun.Tx, r store.Routine) error {
 }
 
 func (s *Store) DeleteRoutine(ctx context.Context, userID, id string) error {
-	res, err := s.db.NewDelete().Model((*store.Routine)(nil)).Where("id = ? AND user_id = ?", id, userID).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*routineRow)(nil)).Where("id = ? AND user_id = ?", id, userID).Exec(ctx)
 	return affected(res, err)
 }
 
@@ -158,7 +150,7 @@ func (s *Store) Reorder(ctx context.Context, userID string, folders, routines []
 		for _, l := range []struct {
 			model any
 			ids   []string
-		}{{(*store.Folder)(nil), folders}, {(*store.Routine)(nil), routines}} {
+		}{{(*folderRow)(nil), folders}, {(*routineRow)(nil), routines}} {
 			for i, id := range l.ids {
 				res, err := tx.NewUpdate().Model(l.model).Set("position = ?", i).
 					Where("id = ? AND user_id = ?", id, userID).Exec(ctx)
@@ -177,7 +169,7 @@ func affected(res sql.Result, err error) error {
 		return mapErr(err)
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return store.ErrNotFound
+		return domain.ErrNotFound
 	}
 	return nil
 }

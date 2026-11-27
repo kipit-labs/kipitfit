@@ -6,30 +6,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
 func TestPutWorkout(t *testing.T) {
 	ctx := context.Background()
 	c, me, friend := twoUsers(t)
-	lift := byKind(t, c, me, store.KindWeightReps)
-	dip := byKind(t, c, me, store.KindWeightedBodyweight)
-	pullup := byKind(t, c, me, store.KindAssistedBodyweight)
-	plank := byKind(t, c, me, store.KindDuration)
-	r, _ := c.CreateRoutine(ctx, me, store.Routine{Name: "Push"})
+	lift := byKind(t, c, me, domain.KindWeightReps)
+	dip := byKind(t, c, me, domain.KindWeightedBodyweight)
+	pullup := byKind(t, c, me, domain.KindAssistedBodyweight)
+	plank := byKind(t, c, me, domain.KindDuration)
+	r, _ := c.CreateRoutine(ctx, me, domain.Routine{Name: "Push"})
 
 	start := time.Date(2026, 11, 20, 18, 0, 0, 0, time.UTC)
-	rpe := store.Tenths(85)
-	in := store.Workout{Title: " Push ", RoutineID: r.ID, StartedAt: start, EndedAt: start.Add(time.Hour), Exercises: []store.WorkoutExercise{
-		{ExerciseID: lift.ID, Superset: "A", Sets: []store.WorkoutSet{
-			{Type: store.SetWarmup, WeightG: ptr(20000), Reps: ptr(10)}, // left out of volume
-			{Type: store.SetNormal, WeightG: ptr(102058), Reps: ptr(5), RPE: &rpe},
-			{Type: store.SetDrop, WeightG: ptr(60000), Reps: ptr(8)},
+	rpe := domain.Tenths(85)
+	in := domain.Workout{Title: " Push ", RoutineID: r.ID, StartedAt: start, EndedAt: start.Add(time.Hour), Exercises: []domain.WorkoutExercise{
+		{ExerciseID: lift.ID, Superset: "A", Sets: []domain.WorkoutSet{
+			{Type: domain.SetWarmup, WeightG: ptr(20000), Reps: ptr(10)}, // left out of volume
+			{Type: domain.SetNormal, WeightG: ptr(102058), Reps: ptr(5), RPE: &rpe},
+			{Type: domain.SetDrop, WeightG: ptr(60000), Reps: ptr(8)},
 		}},
-		{ExerciseID: dip.ID, Superset: "A", Sets: []store.WorkoutSet{{Type: store.SetFailure, WeightG: ptr(10000), Reps: ptr(6)}, {Type: store.SetNormal, Reps: ptr(10)}}},
-		{ExerciseID: pullup.ID, Sets: []store.WorkoutSet{{Type: store.SetNormal, WeightG: ptr(20000), Reps: ptr(8)}}},
-		{ExerciseID: plank.ID, Sets: []store.WorkoutSet{{Type: store.SetNormal, DurationS: ptr(60)}}},
+		{ExerciseID: dip.ID, Superset: "A", Sets: []domain.WorkoutSet{{Type: domain.SetFailure, WeightG: ptr(10000), Reps: ptr(6)}, {Type: domain.SetNormal, Reps: ptr(10)}}},
+		{ExerciseID: pullup.ID, Sets: []domain.WorkoutSet{{Type: domain.SetNormal, WeightG: ptr(20000), Reps: ptr(8)}}},
+		{ExerciseID: plank.ID, Sets: []domain.WorkoutSet{{Type: domain.SetNormal, DurationS: ptr(60)}}},
 	}}
 	id := ids.New()
 	w, err := c.PutWorkout(ctx, me, id, in)
@@ -48,33 +48,33 @@ func TestPutWorkout(t *testing.T) {
 	if page, _ := c.ListWorkouts(ctx, me, ""); len(page.Workouts) != 1 || page.Next != "" {
 		t.Fatalf("history after a retry = %+v", page)
 	}
-	if _, err := c.PutWorkout(ctx, friend, id, in); !errors.Is(err, store.ErrNotFound) {
+	if _, err := c.PutWorkout(ctx, friend, id, in); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("friend puts my workout id: %v", err)
 	}
 
-	one := func(e store.Exercise, s store.WorkoutSet) store.Workout {
-		return store.Workout{Title: "W", StartedAt: start, EndedAt: start.Add(time.Hour),
-			Exercises: []store.WorkoutExercise{{ExerciseID: e.ID, Sets: []store.WorkoutSet{s}}}}
+	one := func(e domain.Exercise, s domain.WorkoutSet) domain.Workout {
+		return domain.Workout{Title: "W", StartedAt: start, EndedAt: start.Add(time.Hour),
+			Exercises: []domain.WorkoutExercise{{ExerciseID: e.ID, Sets: []domain.WorkoutSet{s}}}}
 	}
-	n := store.SetNormal
+	n := domain.SetNormal
 	for name, bad := range map[string]struct {
 		id   string
-		in   store.Workout
+		in   domain.Workout
 		want error
 	}{
-		"bad id":          {"nope", one(lift, store.WorkoutSet{Type: n, WeightG: ptr(1), Reps: ptr(1)}), ErrWorkoutID},
-		"ends first":      {ids.New(), store.Workout{Title: "W", StartedAt: start, EndedAt: start.Add(-time.Second)}, ErrWorkoutTimes},
-		"two days":        {ids.New(), store.Workout{Title: "W", StartedAt: start, EndedAt: start.Add(48 * time.Hour)}, ErrWorkoutTimes},
-		"no title":        {ids.New(), store.Workout{StartedAt: start, EndedAt: start}, ErrTitle},
-		"no sets":         {ids.New(), store.Workout{Title: "W", StartedAt: start, EndedAt: start, Exercises: []store.WorkoutExercise{{ExerciseID: lift.ID}}}, ErrWorkoutEmpty},
-		"lift no weight":  {ids.New(), one(lift, store.WorkoutSet{Type: n, Reps: ptr(5)}), ErrSetMissing},
-		"lift no reps":    {ids.New(), one(lift, store.WorkoutSet{Type: n, WeightG: ptr(5)}), ErrSetMissing},
-		"plank with reps": {ids.New(), one(plank, store.WorkoutSet{Type: n, DurationS: ptr(30), Reps: ptr(3)}), ErrSetValue},
-		"plank no time":   {ids.New(), one(plank, store.WorkoutSet{Type: n}), ErrSetMissing},
-		"rpe 5.5":         {ids.New(), one(lift, store.WorkoutSet{Type: n, WeightG: ptr(1), Reps: ptr(1), RPE: ptr(store.Tenths(55))}), ErrRPE},
-		"rpe 8.3":         {ids.New(), one(lift, store.WorkoutSet{Type: n, WeightG: ptr(1), Reps: ptr(1), RPE: ptr(store.Tenths(83))}), ErrRPE},
-		"bad type":        {ids.New(), one(lift, store.WorkoutSet{Type: "x", WeightG: ptr(1), Reps: ptr(1)}), ErrSetType},
-		"unknown ex":      {ids.New(), one(store.Exercise{ID: "nope"}, store.WorkoutSet{Type: n}), store.ErrNotFound},
+		"bad id":          {"nope", one(lift, domain.WorkoutSet{Type: n, WeightG: ptr(1), Reps: ptr(1)}), ErrWorkoutID},
+		"ends first":      {ids.New(), domain.Workout{Title: "W", StartedAt: start, EndedAt: start.Add(-time.Second)}, ErrWorkoutTimes},
+		"two days":        {ids.New(), domain.Workout{Title: "W", StartedAt: start, EndedAt: start.Add(48 * time.Hour)}, ErrWorkoutTimes},
+		"no title":        {ids.New(), domain.Workout{StartedAt: start, EndedAt: start}, ErrTitle},
+		"no sets":         {ids.New(), domain.Workout{Title: "W", StartedAt: start, EndedAt: start, Exercises: []domain.WorkoutExercise{{ExerciseID: lift.ID}}}, ErrWorkoutEmpty},
+		"lift no weight":  {ids.New(), one(lift, domain.WorkoutSet{Type: n, Reps: ptr(5)}), ErrSetMissing},
+		"lift no reps":    {ids.New(), one(lift, domain.WorkoutSet{Type: n, WeightG: ptr(5)}), ErrSetMissing},
+		"plank with reps": {ids.New(), one(plank, domain.WorkoutSet{Type: n, DurationS: ptr(30), Reps: ptr(3)}), ErrSetValue},
+		"plank no time":   {ids.New(), one(plank, domain.WorkoutSet{Type: n}), ErrSetMissing},
+		"rpe 5.5":         {ids.New(), one(lift, domain.WorkoutSet{Type: n, WeightG: ptr(1), Reps: ptr(1), RPE: ptr(domain.Tenths(55))}), ErrRPE},
+		"rpe 8.3":         {ids.New(), one(lift, domain.WorkoutSet{Type: n, WeightG: ptr(1), Reps: ptr(1), RPE: ptr(domain.Tenths(83))}), ErrRPE},
+		"bad type":        {ids.New(), one(lift, domain.WorkoutSet{Type: "x", WeightG: ptr(1), Reps: ptr(1)}), ErrSetType},
+		"unknown ex":      {ids.New(), one(domain.Exercise{ID: "nope"}, domain.WorkoutSet{Type: n}), domain.ErrNotFound},
 	} {
 		if _, err := c.PutWorkout(ctx, me, bad.id, bad.in); !errors.Is(err, bad.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, bad.want)
@@ -98,12 +98,12 @@ func TestPutWorkout(t *testing.T) {
 func TestListWorkoutsPages(t *testing.T) {
 	ctx := context.Background()
 	c, me, _ := twoUsers(t)
-	plank := byKind(t, c, me, store.KindDuration)
+	plank := byKind(t, c, me, domain.KindDuration)
 	start := time.Date(2026, 1, 1, 8, 0, 0, 0, time.UTC)
 	for i := range 21 {
 		at := start.Add(time.Duration(i) * 24 * time.Hour)
-		_, err := c.PutWorkout(ctx, me, ids.New(), store.Workout{Title: "W", StartedAt: at, EndedAt: at.Add(time.Hour),
-			Exercises: []store.WorkoutExercise{{ExerciseID: plank.ID, Sets: []store.WorkoutSet{{Type: store.SetNormal, DurationS: ptr(30)}}}}})
+		_, err := c.PutWorkout(ctx, me, ids.New(), domain.Workout{Title: "W", StartedAt: at, EndedAt: at.Add(time.Hour),
+			Exercises: []domain.WorkoutExercise{{ExerciseID: plank.ID, Sets: []domain.WorkoutSet{{Type: domain.SetNormal, DurationS: ptr(30)}}}}})
 		if err != nil {
 			t.Fatal(err)
 		}
