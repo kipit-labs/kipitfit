@@ -3,6 +3,7 @@ VERSION ?= $(shell cat VERSION)
 export CGO_ENABLED := 0
 # Only goes up: raise it when coverage does.
 COVERAGE_FLOOR := 87
+GOLANGCI_LINT_VERSION := v2.15.0
 PLAYWRIGHT_VERSION = $(shell node -p "require('./web/node_modules/@playwright/test/package.json').version")
 DEV_ENV := KIPITFIT_ADDR=:8080 KIPITFIT_DATA_DIR=./data KIPITFIT_LOG_LEVEL=debug KIPITFIT_APP_URL=http://localhost:5173
 
@@ -43,9 +44,9 @@ e2e: build
 		-v $(CURDIR):$(CURDIR) -w $(CURDIR)/web mcr.microsoft.com/playwright:v$(PLAYWRIGHT_VERSION)-noble \
 		node_modules/.bin/playwright test $(ARGS)
 
+# gofmt, vet, the layer rules and file length (.golangci.yml), oxlint, types.
 lint: ui-stub
-	@unformatted=$$(gofmt -l cmd internal web); if [ -n "$$unformatted" ]; then echo "Run gofmt on:"; echo "$$unformatted"; exit 1; fi
-	go vet ./...
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
 	cd web && pnpm lint && pnpm exec tsc -b
 
 docker:

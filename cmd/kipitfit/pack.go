@@ -75,7 +75,7 @@ func packCmd(args []string) error {
 		return err
 	}
 
-	path, sum, cleanup, err := fetch(src, cfg.DataDir)
+	path, sum, cleanup, err := fetch(ctx, src, cfg.DataDir)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func packCmd(args []string) error {
 }
 
 // fetch returns a local path to src, downloading a URL into dir, and the ZIP's SHA-256.
-func fetch(src, dir string) (path, sum string, cleanup func(), err error) {
+func fetch(ctx context.Context, src, dir string) (path, sum string, cleanup func(), err error) {
 	cleanup = func() {}
 	h := sha256.New()
 	if !strings.HasPrefix(src, "https://") && !strings.HasPrefix(src, "http://") {
@@ -129,7 +129,11 @@ func fetch(src, dir string) (path, sum string, cleanup func(), err error) {
 		return src, hex.EncodeToString(h.Sum(nil)), cleanup, nil
 	}
 	cl := &http.Client{Timeout: 30 * time.Minute}
-	resp, err := cl.Get(src)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
+	if err != nil {
+		return "", "", cleanup, err
+	}
+	resp, err := cl.Do(req)
 	if err != nil {
 		return "", "", cleanup, err
 	}

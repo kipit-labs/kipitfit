@@ -61,7 +61,7 @@ func (s *Store) ReplaceLibrary(ctx context.Context, p store.Pack, exs []store.Ex
 		// The rest of the old library is archived, not deleted: a workout under
 		// way on a phone still holds its ids, and must still save.
 		r, err := tx.NewUpdate().Model((*store.Exercise)(nil)).Set("archived_at = ?", t).
-			Where("owner_id IS NULL").Where("slug NOT IN (?)", bun.In(slugs)).Where("archived_at IS NULL").Exec(ctx)
+			Where("owner_id IS NULL").Where("slug NOT IN (?)", bun.List(slugs)).Where("archived_at IS NULL").Exec(ctx)
 		if err != nil {
 			return err
 		}

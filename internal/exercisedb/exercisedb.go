@@ -38,7 +38,7 @@ func Load() ([]store.Exercise, error) {
 	exs := make([]store.Exercise, len(rows))
 	for i, r := range rows {
 		r.Exercise.Slug = r.Slug
-		r.Exercise.Kind = Kind(r.Exercise)
+		r.Kind = Kind(r.Exercise)
 		exs[i] = r.Exercise
 	}
 	return exs, nil

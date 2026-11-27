@@ -169,7 +169,7 @@ func (s *Store) ExerciseSets(ctx context.Context, userID string, exerciseIDs []s
 		Join("JOIN workouts AS w ON w.id = we.workout_id").
 		ColumnExpr("w.id AS workout_id, w.title, w.started_at, we.exercise_id, we.position AS exercise").
 		ColumnExpr(`s.position AS "set", s.type, s.weight_g, s.reps, s.rpe, s.duration_s, s.distance_m`).
-		Where("w.user_id = ? AND we.exercise_id IN (?)", userID, bun.In(exerciseIDs)).
+		Where("w.user_id = ? AND we.exercise_id IN (?)", userID, bun.List(exerciseIDs)).
 		OrderExpr("w.started_at, w.id, we.position, s.position").
 		Scan(ctx, &out)
 	return out, mapErr(err)
