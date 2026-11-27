@@ -308,7 +308,7 @@ function ExerciseCard({
                 inputMode="decimal"
                 aria-label={t("sets.weightOf", { set: labels[i] })}
                 placeholder="—"
-                value={s.weightG == null ? "" : formatWeight(s.weightG, unit)}
+                value={s.weightG == null ? "" : formatWeight(s.weightG, unit, true)}
                 parse={(v) => parseWeight(v, unit)}
                 onValue={(weightG) => setSet(i, { weightG })}
               />
@@ -318,7 +318,7 @@ function ExerciseCard({
                 inputMode="decimal"
                 aria-label={t("sets.distanceOf", { set: labels[i] })}
                 placeholder="—"
-                value={s.distanceM == null ? "" : formatKm(s.distanceM)}
+                value={s.distanceM == null ? "" : formatKm(s.distanceM, true)}
                 parse={parseKm}
                 onValue={(distanceM) => setSet(i, { distanceM })}
               />
