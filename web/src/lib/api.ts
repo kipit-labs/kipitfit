@@ -177,6 +177,17 @@ export type LoggedWorkout = {
   records: PersonalRecord[];
 };
 
+/** A workout in figures, for the Progress tab. */
+export type WorkoutStats = {
+  id: string;
+  startedAt: string;
+  endedAt: string;
+  volumeG: number;
+  sets: number;
+  /** Working sets per primary muscle. */
+  muscles: Record<string, number>;
+};
+
 export type ExerciseProgress = {
   records: PersonalRecord[];
   /** Heaviest weight lifted for at least reps reps, 1 to 12. */
@@ -216,6 +227,7 @@ export const api = {
   deleteWorkout: (id: string) => send<void>("DELETE", `/workouts/${id}`),
   bests: (exerciseIds: string[]) =>
     request<Record<string, Partial<Record<RecordKind, number>>>>(`/bests?exercise=${exerciseIds.map(encodeURIComponent).join(",")}`),
+  stats: (from: Date) => request<WorkoutStats[]>(`/stats?from=${encodeURIComponent(from.toISOString())}`),
   exerciseProgress: (id: string) => request<ExerciseProgress>(`/exercises/${id}/progress`),
   previous: (exerciseIds: string[]) =>
     request<Record<string, LoggedSet[]>>(`/previous?exercise=${exerciseIds.map(encodeURIComponent).join(",")}`),

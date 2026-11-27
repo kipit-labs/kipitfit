@@ -206,7 +206,7 @@ simplest for a reorderable editor; `PUT /api/routines/order` reorders folders an
 | GET | `/api/exercises/{id}/progress` | built: records, rep records, and each workout with it (sets, chart values, records beaten) |
 | GET | `/api/bests?exercise=` | built: current bests, for live detection |
 | PUT GET | `/api/workouts/{id}` | built; answers carry the `records` the workout beat |
-| GET | `/api/stats?from=&to=` | per-week counts, volume, sets per muscle, training days |
+| GET | `/api/stats?from=` | built: each workout since `from` (at most 400 days back) in figures — times, volume, sets, working sets per primary muscle; the phone buckets them into its own weeks and days, so time zones stay on the phone |
 | GET POST DELETE | `/api/measurements` | body measurements |
 | GET | `/api/feed?after=` | friends' visible workouts, 20 a page |
 | PUT DELETE | `/api/friends/{id}` · `/api/workouts/{id}/kudos` | request/accept, unfriend; kudos |

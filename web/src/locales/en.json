@@ -39,7 +39,25 @@
   },
   "progress": {
     "emptyTitle": "No progress to show",
-    "emptyDescription": "Charts and records appear once you log workouts."
+    "emptyDescription": "Charts and records appear once you log workouts.",
+    "thisWeek": "This week",
+    "workouts": "Workouts",
+    "lastWeek": "last week {{value}}",
+    "weeks": "Last 12 weeks",
+    "hours": "Hours",
+    "volume": "Volume ({{unit}})",
+    "weekOf": "Week of {{date}}",
+    "trainingDays_one": "{{count}} training day",
+    "trainingDays_other": "{{count}} training days",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "trainedOn_one": "{{date}}: {{count}} workout",
+    "trainedOn_other": "{{date}}: {{count}} workouts",
+    "muscles": "Sets per muscle",
+    "musclesDescription": "Working sets, by primary muscle.",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "noSets": "No sets in this period."
   },
   "me": {
     "profile": "Profile",
@@ -329,7 +347,8 @@
     "workout_times_invalid": "A workout ends after it starts, within a day.",
     "workout_empty": "Log at least one set first.",
     "set_value_missing": "A set is missing a value its exercise needs.",
-    "rpe_invalid": "RPE goes from 6 to 10 in steps of 0.5."
+    "rpe_invalid": "RPE goes from 6 to 10 in steps of 0.5.",
+    "stats_from_invalid": "The period asked for must start within the last {{days}} days."
   },
   "records": {
     "pr": "PR",
