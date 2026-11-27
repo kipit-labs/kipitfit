@@ -122,7 +122,7 @@ func ValidKey(key string) bool {
 			return false
 		}
 		for _, r := range seg {
-			if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' || r == '.') {
+			if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '-' && r != '_' && r != '.' {
 				return false
 			}
 		}
@@ -154,7 +154,7 @@ func (m *Memory) Stat(_ context.Context, key string) (Info, error) {
 	return o.info, nil
 }
 
-func (m *Memory) Get(ctx context.Context, key string) (Object, Info, error) {
+func (m *Memory) Get(_ context.Context, key string) (Object, Info, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	o, ok := m.objs[key]

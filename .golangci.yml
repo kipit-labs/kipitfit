@@ -1,0 +1,71 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - depguard
+    - errorlint
+    - gocritic
+    - misspell
+    - nilerr
+    - noctx
+    - revive
+    - sqlclosecheck
+    - unconvert
+    - unparam
+  settings:
+    # Clean architecture: dependencies point inward. Each rule lists what a
+    # layer may import; anything else fails the lint.
+    depguard:
+      rules:
+        domain:
+          list-mode: strict
+          files: ["**/internal/domain/**"]
+          allow: [$gostd]
+        usecase:
+          list-mode: strict
+          files: ["**/internal/usecase/**"]
+          allow:
+            - $gostd
+            - github.com/kipit-labs/kipitfit/internal/domain
+            - github.com/kipit-labs/kipitfit/internal/usecase
+            - github.com/kipit-labs/kipitfit/internal/ids
+        infrastructure:
+          files: ["**/internal/infrastructure/**"]
+          deny:
+            - pkg: github.com/kipit-labs/kipitfit/internal/usecase
+              desc: adapters implement domain ports, they never call use cases
+            - pkg: github.com/kipit-labs/kipitfit/internal/delivery
+              desc: adapters know nothing about HTTP
+        delivery:
+          # Handler tests run on the real SQLite store (wired in the test), so
+          # the rule holds the handlers, not their tests.
+          files: ["**/internal/delivery/**", "!$test"]
+          deny:
+            - pkg: github.com/kipit-labs/kipitfit/internal/infrastructure
+              desc: handlers go through use cases, wiring is in cmd/kipitfit
+            - pkg: github.com/uptrace/bun
+              desc: handlers never touch SQL
+            - pkg: modernc.org/sqlite
+              desc: handlers never touch SQL
+    revive:
+      enable-default-rules: true
+      rules:
+        # Small files: easier to review, and to read whole (people and LLMs).
+        - name: file-length-limit
+          arguments: [{ max: 500 }]
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+  exclusions:
+    # std-error-handling: unchecked Close/Flush/print, which only read paths use here.
+    presets: [std-error-handling, common-false-positives]
+    rules:
+      - path: _test\.go
+        linters: [noctx, unparam]
+
+formatters:
+  enable:
+    - gofmt

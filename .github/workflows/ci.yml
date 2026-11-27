@@ -26,15 +26,11 @@ jobs:
       # go:embed needs web/dist; the web job builds the real one.
       - run: make ui-stub
 
-      - name: Check formatting
-        run: |
-          unformatted=$(gofmt -l cmd internal web)
-          if [ -n "$unformatted" ]; then
-            echo "::error::gofmt needed on: $unformatted"
-            exit 1
-          fi
+      # gofmt, vet, the clean-architecture layer rules and file length (.golangci.yml).
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0
 
-      - run: go vet ./...
       # Unit tests and the end-to-end journeys (cmd/kipitfit), under the coverage floor.
       - run: make cover
 

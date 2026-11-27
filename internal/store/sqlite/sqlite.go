@@ -292,7 +292,7 @@ func mapErr(err error) error {
 	if errors.As(err, &se) {
 		switch se.Code() {
 		case sqlite3.SQLITE_CONSTRAINT_UNIQUE, sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY:
-			return fmt.Errorf("%w: %v", store.ErrConflict, err)
+			return fmt.Errorf("%w: %w", store.ErrConflict, err)
 		}
 	}
 	return err

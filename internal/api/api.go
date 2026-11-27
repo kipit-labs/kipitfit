@@ -103,12 +103,12 @@ func (a *API) fail(w http.ResponseWriter, err error) {
 }
 
 func status(kind error) int {
-	switch kind {
-	case core.ErrUnauthorized:
+	switch {
+	case errors.Is(kind, core.ErrUnauthorized):
 		return http.StatusUnauthorized
-	case core.ErrForbidden:
+	case errors.Is(kind, core.ErrForbidden):
 		return http.StatusForbidden
-	case core.ErrConflict:
+	case errors.Is(kind, core.ErrConflict):
 		return http.StatusConflict
 	default:
 		return http.StatusBadRequest
