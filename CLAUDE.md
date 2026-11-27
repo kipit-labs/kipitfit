@@ -20,7 +20,7 @@ Design doc: `docs/design.md` — read before architectural changes. Roadmap in "
   component any app could use goes into the kipitidy repo (change, release, bump here), not into `web/src`. App
   components stay in `web/src` (set table, rest timer, plate visual: fitness wording).
 - Mobile-first PWA (phone at the gym, 390×844 first), no native wrapper. Theme via kipitidy's `theme.css`; the only
-  override is the coral `--primary` in `web/src/index.css`.
+  override is the teal `--primary` (kipitfit's kipit-labs colour) in `web/src/index.css`.
 - Sign-up is invite-only: an admin creates an invite, the link is the credential.
 
 ## Commands
