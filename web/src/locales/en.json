@@ -33,7 +33,9 @@
   "workout": {
     "library": "Exercise library",
     "libraryDescription": "Browse the exercises and create your own.",
-    "startEmpty": "Start empty workout"
+    "startEmpty": "Start empty workout",
+    "history": "History",
+    "historyDescription": "Your past workouts, to look back on or fix."
   },
   "progress": {
     "emptyTitle": "No progress to show",
@@ -280,7 +282,13 @@
     "discardFinish": "Discard this workout",
     "discardFinishDescription": "It was never saved: its sets will be lost.",
     "newRecords_one": "New record",
-    "newRecords_other": "{{count}} new records"
+    "newRecords_other": "{{count}} new records",
+    "saveEdit": "Save changes",
+    "editTitle": "Edit workout",
+    "editing": "Editing {{title}}",
+    "discardEdit": "Cancel editing",
+    "discardEditTitle": "Cancel editing?",
+    "discardEditDescription": "Your changes won't be saved."
   },
   "errors": {
     "generic": "Something went wrong",
@@ -353,5 +361,22 @@
     "date": "Date",
     "noHistory": "Not done yet",
     "noHistoryDescription": "Records and history show up after a workout with this exercise."
+  },
+  "history": {
+    "title": "History",
+    "emptyTitle": "No workouts yet",
+    "emptyDescription": "Finished workouts show up here.",
+    "more": "Show more",
+    "records_one": "{{count}} record",
+    "records_other": "{{count}} records",
+    "exerciseSets_one": "{{name}} · {{count}} set",
+    "exerciseSets_other": "{{name}} · {{count}} sets",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete {{title}}?",
+    "deleteDescription": "Its sets and records go. Later workouts' records are worked out again.",
+    "deleteConfirm": "Delete",
+    "deleteFailed": "Couldn't delete the workout",
+    "deleted": "Workout deleted"
   }
 }

@@ -32,7 +32,7 @@ import { useMe } from "@/lib/auth";
 import { defaultRestS } from "@/lib/routines";
 import { fieldsOf, setLabels, setText, weightSign } from "@/lib/sets";
 import { formatDuration, formatKm, formatWeight, parseDuration, parseKm, parseWeight } from "@/lib/units";
-import { doneSets, hint, recordsOf, volumeOf, type Live as LiveState, type LiveExercise, type LiveSet } from "@/live/model";
+import { doneSets, elapsedS, hint, recordsOf, volumeOf, type Live as LiveState, type LiveExercise, type LiveSet } from "@/live/model";
 import { unlockAudio } from "@/live/signal";
 import { dispatch, loadPrevious, setLive, useLive } from "@/live/store";
 import { useNow } from "@/live/useNow";
@@ -55,7 +55,9 @@ export function Live() {
     addEventListener("pointerdown", unlockAudio, { once: true });
     return () => removeEventListener("pointerdown", unlockAudio);
   }, []);
-  if (!live) return <Navigate to="/workout" replace />;
+  // Whoever ends the workout on this screen (finish, discard) also says where to go: an edit goes back to its page.
+  const [had] = useState(!!live);
+  if (!live) return had ? null : <Navigate to="/workout" replace />;
   return <Screen live={live} unit={me.unit} />;
 }
 
@@ -66,22 +68,23 @@ function Screen({ live, unit }: { live: LiveState; unit: Unit }) {
   const [adding, setAdding] = useState(false);
   const [swapping, setSwapping] = useState<number | null>(null);
   const [finishing, setFinishing] = useState(false);
-  const title = live.routine?.name ?? t("live.defaultTitle");
+  const title = live.edit?.title ?? live.routine?.name ?? t("live.defaultTitle");
+  const leave = () => navigate(live.edit ? `/workouts/${live.id}` : "/workout");
   const exs = live.exercises;
   return (
     <>
       <div className="sticky top-0 z-10 -mx-4 mb-4 border-b bg-background/95 px-4 py-2 backdrop-blur">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon-sm" className="-ml-2" aria-label={t("live.minimize")} onClick={() => navigate("/workout")}>
+          <Button variant="ghost" size="icon-sm" className="-ml-2" aria-label={t("live.minimize")} onClick={leave}>
             <ChevronDown />
           </Button>
           <h1 className="min-w-0 flex-1 truncate font-heading font-semibold">{title}</h1>
           <Button size="sm" onClick={() => setFinishing(true)}>
-            {t("live.finish")}
+            {t(live.edit ? "common.save" : "live.finish")}
           </Button>
         </div>
         <dl className="mt-1 grid grid-cols-3 text-center text-sm">
-          <Stat label={t("live.duration")} value={formatDuration(Math.max(0, Math.floor((now - live.startedAt) / 1000)))} />
+          <Stat label={t("live.duration")} value={formatDuration(elapsedS(live, now))} />
           <Stat label={t("live.volume")} value={`${formatWeight(volumeOf(live), unit)} ${unit}`} />
           <Stat label={t("live.sets")} value={String(doneSets(live))} />
         </dl>
@@ -109,17 +112,17 @@ function Screen({ live, unit }: { live: LiveState; unit: Unit }) {
         trigger={
           <Button variant="ghost" className="mt-4 w-full text-destructive">
             <Trash2 data-icon="inline-start" />
-            {t("live.discard")}
+            {t(live.edit ? "live.discardEdit" : "live.discard")}
           </Button>
         }
-        title={t("live.discardTitle")}
-        description={t("live.discardDescription")}
+        title={t(live.edit ? "live.discardEditTitle" : "live.discardTitle")}
+        description={t(live.edit ? "live.discardEditDescription" : "live.discardDescription")}
         confirmLabel={t("live.discardConfirm")}
         cancelLabel={t("common.cancel")}
         destructive
         onConfirm={() => {
           setLive(null);
-          navigate("/workout");
+          leave();
         }}
       />
 

@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 
 import type { Unit } from "@/lib/api";
 import { formatDuration, formatWeight } from "@/lib/units";
-import { doneSets, recordsOf, toWorkout, updatedRoutine, volumeOf, type Live, type RoutineUpdate } from "@/live/model";
+import { doneSets, elapsedS, recordsOf, toWorkout, updatedRoutine, volumeOf, type Live, type RoutineUpdate } from "@/live/model";
 import { finish } from "@/live/store";
 
 import { RecordBadge } from "./RecordBadge";
@@ -33,8 +33,8 @@ export function FinishSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[90svh] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
-          <SheetTitle>{t("live.finishTitle")}</SheetTitle>
-          <SheetDescription className="sr-only">{t("live.finishTitle")}</SheetDescription>
+          <SheetTitle>{t(live.edit ? "live.editTitle" : "live.finishTitle")}</SheetTitle>
+          <SheetDescription className="sr-only">{t(live.edit ? "live.editTitle" : "live.finishTitle")}</SheetDescription>
         </SheetHeader>
         {/* Mounted while open, so the duration is taken when the sheet opens. */}
         {open && <Form live={live} title={title} unit={unit} />}
@@ -46,9 +46,9 @@ export function FinishSheet({
 function Form({ live, title: initial, unit }: { live: Live; title: string; unit: Unit }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [endedAt] = useState(Date.now);
+  const [endedAt] = useState(() => live.edit?.endedAt ?? Date.now());
   const [title, setTitle] = useState(initial);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(live.edit?.notes ?? "");
   const [update, setUpdate] = useState<RoutineUpdate>("keep");
   const sets = doneSets(live);
   const records = live.exercises.flatMap((e, i) => recordsOf(live, i).map((r) => ({ key: `${e.key}-${r.kind}`, name: e.exercise.name, r })));
@@ -63,7 +63,7 @@ function Form({ live, title: initial, unit }: { live: Live; title: string; unit:
       },
       live.userId,
     );
-    navigate("/workout");
+    navigate(live.edit ? `/workouts/${live.id}` : "/workout");
   };
   return (
     <form
@@ -74,7 +74,7 @@ function Form({ live, title: initial, unit }: { live: Live; title: string; unit:
       }}
     >
       <dl className="grid grid-cols-3 gap-2 rounded-xl bg-muted p-3 text-center">
-        <Fact label={t("live.duration")} value={formatDuration(Math.floor((endedAt - live.startedAt) / 1000))} />
+        <Fact label={t("live.duration")} value={formatDuration(elapsedS(live, endedAt))} />
         <Fact label={t("live.volume")} value={`${formatWeight(volumeOf(live), unit)} ${unit}`} />
         <Fact label={t("live.sets")} value={String(sets)} />
       </dl>
@@ -113,7 +113,7 @@ function Form({ live, title: initial, unit }: { live: Live; title: string; unit:
       )}
       <SheetFooter className="px-0">
         <Button type="submit" size="lg" disabled={sets === 0}>
-          {t("live.save")}
+          {t(live.edit ? "live.saveEdit" : "live.save")}
         </Button>
       </SheetFooter>
     </form>

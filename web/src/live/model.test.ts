@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ExerciseSummary, Routine } from "@/lib/api";
 
-import { doneSets, recordsOf, reduce, start, toWorkout, updatedRoutine, volumeOf, type Live } from "./model";
+import { doneSets, editing, elapsedS, recordsOf, reduce, start, toWorkout, updatedRoutine, volumeOf, type Live } from "./model";
 import { ulid } from "./ulid";
 
 const ex = (id: string, kind: ExerciseSummary["kind"] = "weight_reps"): ExerciseSummary => ({
@@ -85,6 +85,32 @@ describe("live workout", () => {
     l = run(l, { type: "toggleSet", i: 0, j: 1, now: t0 });
     expect(recordsOf(l, 0).map((r) => `${r.kind}@${r.set}`)).toEqual(["e1rm@1", "weight@1", "set_volume@0", "session_volume@-1", "reps@0"]);
     expect(recordsOf(l, 1)).toEqual([]); // the plank was never done
+  });
+
+  it("edits a saved workout: same times, title and routine, no rest, no badges", () => {
+    const set = { type: "normal" as const, weightG: 100000, reps: 5, rpe: null, durationS: null, distanceM: null };
+    let l = editing(
+      {
+        id: "w1",
+        title: "Push",
+        notes: "felt good",
+        routineId: "r1",
+        startedAt: "2026-11-20T18:00:00Z",
+        endedAt: "2026-11-20T19:00:00Z",
+        volumeG: 500000,
+        exercises: [{ exerciseId: "bench", notes: "", exercise: bench, sets: [set] }],
+        records: [],
+      },
+      "u",
+    );
+    l = run(l, { type: "previous", previous: {}, bests: { bench: { weight: 90000 } } }, { type: "addSet", i: 0 });
+    l = run(l, { type: "updateSet", i: 0, j: 1, patch: { weightG: 105000, reps: 3 } }, { type: "toggleSet", i: 0, j: 1, now: t0 });
+    expect(l.rest).toBeUndefined();
+    expect(recordsOf(l, 0)).toEqual([]);
+    expect(elapsedS(l, t0)).toBe(3600);
+    const w = toWorkout(l, l.edit!.title, l.edit!.notes, l.edit!.endedAt);
+    expect(w).toMatchObject({ title: "Push", notes: "felt good", routineId: "r1", startedAt: "2026-11-20T18:00:00.000Z", endedAt: "2026-11-20T19:00:00.000Z" });
+    expect(w.exercises[0].sets.map((s) => s.weightG)).toEqual([100000, 105000]);
   });
 
   it("won't tick a set missing a value with no hint", () => {

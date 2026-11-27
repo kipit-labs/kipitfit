@@ -1,5 +1,5 @@
 // The live workout: a pure model the device keeps in localStorage after every change.
-import type { ExerciseKind, ExerciseSummary, RecordKind, Routine, RoutineInput, RoutineSet, SetType } from "@/lib/api";
+import type { ExerciseKind, ExerciseSummary, LoggedWorkout, RecordKind, Routine, RoutineInput, RoutineSet, SetType } from "@/lib/api";
 import { beaten } from "@/lib/records";
 import { defaultRestS, leaveSuperset, move, relabel, supersetWithNext } from "@/lib/routines";
 import { fieldsOf } from "@/lib/sets";
@@ -52,6 +52,8 @@ export type Live = {
   bests?: Record<string, Partial<Record<RecordKind, number>>>;
   rest?: { endsAt: number; totalS: number };
   nextKey: number;
+  /** A saved workout being edited: it keeps its times, title, notes and routine; no rest timer, no badges. */
+  edit?: { endedAt: number; title: string; notes: string; routineId?: string };
 };
 
 const blankSet = (type: SetType = "normal"): LiveSet => ({
@@ -81,6 +83,29 @@ export function start(id: string, userId: string, now: number, routine?: Routine
     })),
   };
 }
+
+/** A saved workout loaded back to edit, all its sets done. */
+export function editing(w: LoggedWorkout, userId: string): Live {
+  return {
+    id: w.id,
+    userId,
+    startedAt: Date.parse(w.startedAt),
+    edit: { endedAt: Date.parse(w.endedAt), title: w.title, notes: w.notes, routineId: w.routineId },
+    previous: {},
+    nextKey: w.exercises.length,
+    exercises: w.exercises.map((e, key) => ({
+      key,
+      exercise: e.exercise!,
+      superset: e.superset,
+      notes: e.notes,
+      restS: null,
+      sets: e.sets.map((s) => ({ ...s, rpe: s.rpe ?? undefined, done: true })),
+    })),
+  };
+}
+
+/** Seconds the workout has run, or ran for one being edited. */
+export const elapsedS = (live: Live, now: number) => Math.max(0, Math.floor(((live.edit?.endedAt ?? now) - live.startedAt) / 1000));
 
 export type Action =
   | { type: "previous"; previous: Record<string, LoggedSet[]>; bests: NonNullable<Live["bests"]> }
@@ -141,6 +166,7 @@ export function reduce(live: Live, a: Action): Live {
       const next = { ...live, exercises: at(a.i, (x) => ({ ...x, sets: x.sets.map((y, k) => (k === a.j ? filled : y)) })) };
       // In a superset, the rest comes after its last exercise.
       const restS = e.restS ?? defaultRestS;
+      if (live.edit) return next;
       if (e.superset && exs[a.i + 1]?.superset === e.superset) return next;
       return restS > 0 ? { ...next, rest: { endsAt: a.now + restS * 1000, totalS: restS } } : { ...next, rest: undefined };
     }
@@ -201,6 +227,8 @@ export function volumeOf(live: Live): number {
  */
 export const recordsOf = (live: Live, i: number) => {
   const e = live.exercises[i];
+  // The bests of an edited workout may be its own: the server works its records out again on save.
+  if (live.edit) return [];
   return beaten(e.exercise.kind, e.sets, live.bests?.[e.exercise.id]);
 };
 
@@ -234,7 +262,7 @@ export function toWorkout(live: Live, title: string, notes: string, endedAt: num
   return {
     title,
     notes,
-    routineId: live.routine?.id,
+    routineId: live.edit ? live.edit.routineId : live.routine?.id,
     startedAt: new Date(live.startedAt).toISOString(),
     endedAt: new Date(Math.max(endedAt, live.startedAt)).toISOString(),
     exercises: doneExercises(live).map((e) => ({

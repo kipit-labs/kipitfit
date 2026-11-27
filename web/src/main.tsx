@@ -14,6 +14,7 @@ import { ApiError } from "./lib/api";
 import { errorMessage } from "./lib/errors";
 import { ExerciseDetail } from "./routes/ExerciseDetail";
 import { Exercises } from "./routes/Exercises";
+import { History, WorkoutDetail } from "./routes/History";
 import { Me } from "./routes/Me";
 import { Live } from "./routes/Live";
 import { Feed, Progress } from "./routes/Placeholders";
@@ -58,6 +59,8 @@ const router = createBrowserRouter([
       { path: "routines/:id", element: <RoutineEditor /> },
       { path: "exercises", element: <Exercises /> },
       { path: "exercises/:id", element: <ExerciseDetail /> },
+      { path: "history", element: <History /> },
+      { path: "workouts/:id", element: <WorkoutDetail /> },
       { path: "progress", element: <Progress /> },
       { path: "me", element: <Me /> },
       // App renders the invite page itself.
