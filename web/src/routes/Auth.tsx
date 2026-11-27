@@ -20,7 +20,10 @@ function Shell({ title, subtitle, children }: { title: string; subtitle?: string
         </p>
         <Card>
           <CardHeader>
-            <CardTitle>{title}</CardTitle>
+            {/* The kit's CardTitle is a div: screen readers need the page's heading. */}
+            <CardTitle>
+              <h1>{title}</h1>
+            </CardTitle>
             {subtitle && <CardDescription>{subtitle}</CardDescription>}
           </CardHeader>
           {children}
