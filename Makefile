@@ -2,7 +2,7 @@ BIN := bin/kipitfit
 VERSION ?= $(shell cat VERSION)
 export CGO_ENABLED := 0
 # Only goes up: raise it when coverage does.
-COVERAGE_FLOOR := 87
+COVERAGE_FLOOR := 88
 GOLANGCI_LINT_VERSION := v2.15.0
 PLAYWRIGHT_VERSION = $(shell node -p "require('./web/node_modules/@playwright/test/package.json').version")
 DEV_ENV := KIPITFIT_ADDR=:8080 KIPITFIT_DATA_DIR=./data KIPITFIT_LOG_LEVEL=debug KIPITFIT_APP_URL=http://localhost:5173
