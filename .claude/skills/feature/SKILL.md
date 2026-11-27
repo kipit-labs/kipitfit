@@ -23,7 +23,7 @@ Four phases, in order. Never skip the questions or the real-usage tests.
 Follow CLAUDE.md: a new goose migration (never edit a released one), store methods with tests on a temp SQLite, logic
 and its tests in `core`, thin handlers in `api`, coded errors translated in both catalogs, every UI string in both
 locales. Update `README.md` (API table, configuration) and `docs/design.md` when behavior or the plan changes.
-`make test` and `make lint` green before phase 3.
+`make cover`, `make test` and `make lint` green before phase 3.
 
 ## 3. Test in real usage
 
@@ -41,7 +41,7 @@ In the PR description (the last PR of a stack), under `## Testing`:
 ```markdown
 ## Testing
 
-`make test` / `make lint`: green.
+`make cover` / `make test` / `make lint`: green.
 
 | # | Case | How | Expected | Result |
 |---|------|-----|----------|--------|

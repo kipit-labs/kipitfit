@@ -13,7 +13,7 @@ Input: a GitHub issue (`gh issue view <n> --comments`) or a description. Five ph
    SQLite, core tests, api tests with httptest, vitest in `web/`), and see it fail for the reason found. Can't
    reproduce: say what you tried and ask before changing code.
 3. **Fix** the root cause once, in the shared code: grep every caller of what you change. Branch `fix/<short-name>`
-   from `main`. The test passes, and still fails with the fix reverted. `make test` and `make lint` green.
+   from `main`. The test passes, and still fails with the fix reverted. `make cover`, `make test` and `make lint` green.
 4. **Test in real usage** as in the feature skill's phase 3: the reproduction is fixed and the normal path the fix
    touches still works, as the admin and as an invited user or a signed-out visitor where access is involved.
 5. **Report.** PR body: `Fixes #<n>`, a short **What** (the bug and its root cause) and the feature skill's

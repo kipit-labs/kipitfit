@@ -18,7 +18,7 @@ tag. Tags are bare semver, no `v` prefix.
    - on `main`, working tree clean (`git status --porcelain` empty)
    - `git fetch --tags origin`, then local `main` == `origin/main`
    - there are commits since the last tag (`git describe --tags --abbrev=0`; the first release has no tag yet)
-   - `make test` and `make lint` green
+   - `make cover`, `make test` and `make lint` green
 
 2. **Pick the version.** `$ARGUMENTS` may be `X.Y.Z` or `major|minor|patch`. Without one, infer from the
    conventional commits since the last tag (`git log <last>..HEAD --format=%s`): any `!:` or `BREAKING CHANGE` →

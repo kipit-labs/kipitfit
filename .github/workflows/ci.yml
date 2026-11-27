@@ -35,7 +35,8 @@ jobs:
           fi
 
       - run: go vet ./...
-      - run: go test -race ./...
+      # Unit tests and the end-to-end journeys (cmd/kipitfit), under the coverage floor.
+      - run: make cover
 
   web:
     name: Web
