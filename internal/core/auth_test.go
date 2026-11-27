@@ -24,7 +24,7 @@ func newCore(t *testing.T) (*Core, *sqlite.Store) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = st.Close() })
-	c := New(config.Config{SetupToken: "setup", AppURL: "https://fit.example"}, st, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	c := New(config.Config{SetupToken: "setup", AppURL: "https://fit.example"}, st, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err := c.InitAuth(context.Background()); err != nil {
 		t.Fatal(err)
 	}

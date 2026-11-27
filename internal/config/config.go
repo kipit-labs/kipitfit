@@ -29,6 +29,9 @@ type Config struct {
 	// CF-Connecting-IP; read only on requests from TrustedProxies.
 	RealIPHeader   string
 	TrustedProxies []netip.Prefix
+	// S3* locate the bucket for exercise media (pack pictures). With no
+	// endpoint, media is off and the app shows equipment icons.
+	S3Endpoint, S3Bucket, S3AccessKeyID, S3SecretAccessKey, S3Region string
 
 	// Version is the running build (set by main, not the environment).
 	Version string
@@ -46,6 +49,13 @@ func Load() (Config, error) {
 		CookieSecure:   env("KIPITFIT_COOKIE_SECURE", "false") == "true",
 		RealIPHeader:   strings.TrimSpace(env("KIPITFIT_REAL_IP_HEADER", "")),
 		TrustedProxies: prefixes(env("KIPITFIT_TRUSTED_PROXIES", "")),
+
+		S3Endpoint:        strings.TrimRight(env("KIPITFIT_S3_ENDPOINT", ""), "/"),
+		S3Bucket:          env("KIPITFIT_S3_BUCKET", "kipitfit"),
+		S3AccessKeyID:     env("KIPITFIT_S3_ACCESS_KEY_ID", ""),
+		S3SecretAccessKey: env("KIPITFIT_S3_SECRET_ACCESS_KEY", ""),
+		// RustFS and MinIO accept any region; R2 wants "auto".
+		S3Region: env("KIPITFIT_S3_REGION", "us-east-1"),
 	}
 	if c.RealIPHeader != "" && len(c.TrustedProxies) == 0 {
 		return c, errors.New("KIPITFIT_REAL_IP_HEADER needs KIPITFIT_TRUSTED_PROXIES: the proxies allowed to set it")

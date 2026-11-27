@@ -14,6 +14,7 @@ import (
 	"github.com/kipit-labs/kipitfit/internal/api"
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/core"
+	"github.com/kipit-labs/kipitfit/internal/media"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
 	"github.com/kipit-labs/kipitfit/web"
 )
@@ -26,6 +27,15 @@ func main() {
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
 	}
+}
+
+// openMedia connects to the media bucket, or returns nil when none is set.
+func openMedia(cfg config.Config) (media.Store, error) {
+	if cfg.S3Endpoint == "" {
+		return nil, nil
+	}
+	return media.NewS3(media.Config{Endpoint: cfg.S3Endpoint, Bucket: cfg.S3Bucket,
+		AccessKey: cfg.S3AccessKeyID, SecretKey: cfg.S3SecretAccessKey, Region: cfg.S3Region})
 }
 
 func serve() error {
@@ -54,7 +64,14 @@ func serve() error {
 	}
 	defer st.Close()
 
-	c := core.New(cfg, st, log)
+	m, err := openMedia(cfg)
+	if err != nil {
+		return err
+	}
+	if m == nil {
+		log.Info("media off: no KIPITFIT_S3_ENDPOINT, exercises show equipment icons")
+	}
+	c := core.New(cfg, st, m, log)
 	if err := c.InitAuth(ctx); err != nil {
 		return err
 	}

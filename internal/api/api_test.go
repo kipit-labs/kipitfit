@@ -15,10 +15,18 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/core"
+	"github.com/kipit-labs/kipitfit/internal/media"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
 )
 
 func newAPI(t *testing.T) *API {
+	t.Helper()
+	a, _ := newAPIMedia(t)
+	return a
+}
+
+// newAPIMedia is newAPI with an in-memory media bucket.
+func newAPIMedia(t *testing.T) (*API, *media.Memory) {
 	t.Helper()
 	st, err := sqlite.Open(context.Background(), filepath.Join(t.TempDir(), "kipitfit.db"))
 	if err != nil {
@@ -27,11 +35,12 @@ func newAPI(t *testing.T) *API {
 	t.Cleanup(func() { _ = st.Close() })
 	cfg := config.Config{SetupToken: "setup", AppURL: "http://example.com"}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	c := core.New(cfg, st, log)
+	m := media.NewMemory()
+	c := core.New(cfg, st, m, log)
 	if err := c.InitAuth(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	return New(c, cfg, log)
+	return New(c, cfg, log), m
 }
 
 // do sends a request as from http://example.com (httptest's host).
