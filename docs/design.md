@@ -185,10 +185,9 @@ seconds. No floats in the database, so 92.5 kg is always 92 500 and conversion t
 | `routines` | user_id, folder_id, name, notes, position | |
 | `routine_exercises` | routine_id, exercise_id, position, superset, rest_s, notes | `superset` = group letter, NULL when alone |
 | `routine_sets` | routine_exercise_id, position, type, weight_g, reps_min, reps_max, duration_s, distance_m | targets, all nullable |
-| `workouts` | id (made on the phone), user_id, routine_id, title, notes, started_at, ended_at, visibility, volume_g, records | client ULID makes finish idempotent when the network drops; visibility (P6) and records (P5) come later |
+| `workouts` | id (made on the phone), user_id, routine_id, title, notes, started_at, ended_at, visibility, volume_g | client ULID makes finish idempotent when the network drops; visibility comes with P6 |
 | `workout_exercises` | workout_id, exercise_id, position, superset, notes | |
-| `sets` | workout_exercise_id, position, type, weight_g, reps, rpe, duration_s, distance_m, e1rm_g | rpe stored ×10 (8.5 → 85); e1rm_g comes with records (P5); "previous" joins workouts by exercise and start |
-| `records` | user_id, exercise_id, kind, value, set_id, achieved_at | current best per kind; rebuilt for one exercise on edit/delete |
+| `sets` | workout_exercise_id, position, type, weight_g, reps, rpe, duration_s, distance_m | rpe stored ×10 (8.5 → 85); "previous" joins workouts by exercise and start; records are worked out from the sets, not stored (see Records) |
 | `measurements` | user_id, kind, value, unit, measured_at | one row per value; kinds: weight, body_fat, waist, chest, arm_l, arm_r… |
 | `friendships` | user_a, user_b, requested_by, accepted_at | one row per pair, like kipitrek |
 | `kudos`, `comments` | workout_id, user_id, body | |
@@ -204,9 +203,9 @@ simplest for a reorderable editor; `PUT /api/routines/order` reorders folders an
 |---|---|---|
 | GET | `/api/exercises` | library + your custom ones, compact; the app searches and filters (876 rows, ~190 kB) |
 | POST PATCH DELETE | `/api/exercises/{id}` | custom exercises only |
-| GET | `/api/exercises/{id}/history` · `/records` · `/series?metric=` | per-exercise sets, records, chart points |
-| PUT | `/api/workouts/{id}` | built (README) without records: P5 adds the new records to its answer |
-| DELETE | `/api/workouts/{id}` | built; P5 rebuilds the records of its exercises |
+| GET | `/api/exercises/{id}/progress` | built: records, rep records, and each workout with it (sets, chart values, records beaten) |
+| GET | `/api/bests?exercise=` | built: current bests, for live detection |
+| PUT GET | `/api/workouts/{id}` | built; answers carry the `records` the workout beat |
 | GET | `/api/stats?from=&to=` | per-week counts, volume, sets per muscle, training days |
 | GET POST DELETE | `/api/measurements` | body measurements |
 | GET | `/api/feed?after=` | friends' visible workouts, 20 a page |
@@ -234,10 +233,30 @@ for the background the app asks the server to send a Web Push at `endsAt` (an in
 skip). iOS sends pushes only to a PWA added to the home screen.
 
 ### Records
-e1RM uses Epley, `w × (1 + reps / 30)`, for 1–12 reps; above 12 reps the set counts for rep records only. Warm-up sets
-count for nothing. Core computes records when a workout is saved, compares to `records`, and returns what was beaten.
-The phone runs the same formula live from the bests it fetched at start; a Go test and a TS test share one fixture
-file so both agree.
+e1RM uses Epley, `w × (1 + reps / 30)` in grams rounded half up, for 1–12 reps; above 12 reps the set counts for rep
+records only. Warm-up sets count for nothing; drop and failure sets count. What an exercise keeps depends on its kind:
+
+| Kind | Records |
+|---|---|
+| weight × reps | e1RM, heaviest weight, best set volume (w × r), best workout volume, most reps in a set |
+| weighted bodyweight | heaviest added weight, best set volume, best workout volume, most reps (no e1RM until bodyweight is known, P7) |
+| reps only, assisted bodyweight | most reps in a set, most reps in a workout (less assistance is progress too, but doesn't add up with reps) |
+| duration | longest set |
+| distance + duration | longest distance, longest set |
+
+Rep records (weight kinds): the heaviest weight lifted for **at least** n reps, n = 1–12, so 100 kg × 5 also counts
+for 1 to 4 reps and the table has no holes.
+
+A workout beats a record when its best for a kind is strictly above every earlier workout's (by start time); a tie
+isn't a record, and the first workout with a value sets none (else every first workout would be all records). Within
+a workout only its best set holds the record, the earliest on a tie.
+
+Records are **worked out from the sets when read**, not stored: core replays an exercise's sets in order
+(`ExerciseSets`, one query). So editing or deleting a workout, even an old one, re-ranks every later workout with
+nothing to rebuild, and workouts saved before P5 have their records with no backfill. Replaying a few thousand sets
+takes milliseconds; a records table is the upgrade if it ever shows. `PUT /api/workouts/{id}` answers with the records
+the workout beat; the phone runs the same rules live from the bests it fetched at start, and a Go test and a TS test
+share one fixture file (`internal/core/testdata/records.json`) so both agree.
 
 ### Volume and units
 Volume = Σ weight × reps over non-warm-up sets. Weighted bodyweight adds the latest bodyweight measurement; assisted

@@ -38,3 +38,12 @@ func (a *API) previous(w http.ResponseWriter, r *http.Request) {
 	prev, err := a.core.PreviousSets(r.Context(), user(r), exs)
 	reply(a, w, http.StatusOK, prev, err)
 }
+
+func (a *API) bests(w http.ResponseWriter, r *http.Request) {
+	var exs []string
+	if q := r.URL.Query().Get("exercise"); q != "" {
+		exs = strings.Split(q, ",")
+	}
+	b, err := a.core.Bests(r.Context(), user(r), exs)
+	reply(a, w, http.StatusOK, b, err)
+}

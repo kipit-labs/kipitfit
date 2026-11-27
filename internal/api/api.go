@@ -45,6 +45,7 @@ func New(c *core.Core, cfg config.Config, log *slog.Logger) *API {
 	mux.HandleFunc("GET /api/exercises/{id}", a.getExercise)
 	mux.HandleFunc("PATCH /api/exercises/{id}", a.updateExercise)
 	mux.HandleFunc("DELETE /api/exercises/{id}", a.deleteExercise)
+	mux.HandleFunc("GET /api/exercises/{id}/progress", a.exerciseProgress)
 	mux.HandleFunc("GET /api/routines", a.listRoutines)
 	mux.HandleFunc("POST /api/routines", a.createRoutine)
 	mux.HandleFunc("PUT /api/routines/order", a.reorder)
@@ -59,6 +60,7 @@ func New(c *core.Core, cfg config.Config, log *slog.Logger) *API {
 	mux.HandleFunc("PUT /api/workouts/{id}", a.putWorkout)
 	mux.HandleFunc("DELETE /api/workouts/{id}", a.deleteWorkout)
 	mux.HandleFunc("GET /api/previous", a.previous)
+	mux.HandleFunc("GET /api/bests", a.bests)
 	mux.HandleFunc("GET /api/media/{key...}", a.media)
 	mux.HandleFunc("GET /api/library", a.library)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {

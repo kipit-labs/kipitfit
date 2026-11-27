@@ -1,0 +1,90 @@
+[
+  {
+    "name": "weight × reps: first workout sets none, Epley stops at 12 reps, warm-ups never count",
+    "kind": "weight_reps",
+    "sessions": [
+      [
+        { "type": "warmup", "weightG": 140000, "reps": 1 },
+        { "type": "normal", "weightG": 100000, "reps": 5 }
+      ],
+      [
+        { "type": "normal", "weightG": 100000, "reps": 12 },
+        { "type": "failure", "weightG": 120000, "reps": 13 }
+      ],
+      [{ "type": "drop", "weightG": 100000, "reps": 12 }],
+      [{ "type": "warmup", "weightG": 200000, "reps": 1 }]
+    ],
+    "beaten": [
+      {},
+      { "e1rm": 140000, "weight": 120000, "set_volume": 1560000, "session_volume": 2760000, "reps": 13 },
+      {},
+      {}
+    ],
+    "bests": { "e1rm": 140000, "weight": 120000, "set_volume": 1560000, "session_volume": 2760000, "reps": 13 }
+  },
+  {
+    "name": "grams, not the unit typed: 225 lb is 102 058 g",
+    "kind": "weight_reps",
+    "sessions": [
+      [{ "type": "normal", "weightG": 102058, "reps": 5 }],
+      [{ "type": "normal", "weightG": 100000, "reps": 5 }],
+      [{ "type": "normal", "weightG": 102059, "reps": 5 }]
+    ],
+    "beaten": [{}, {}, { "e1rm": 119069, "weight": 102059, "set_volume": 510295, "session_volume": 510295 }],
+    "bests": { "e1rm": 119069, "weight": 102059, "set_volume": 510295, "session_volume": 510295, "reps": 5 }
+  },
+  {
+    "name": "weighted bodyweight: no e1RM, sets without added weight count for reps",
+    "kind": "weighted_bodyweight",
+    "sessions": [
+      [{ "type": "normal", "reps": 10 }],
+      [
+        { "type": "normal", "weightG": 10000, "reps": 8 },
+        { "type": "normal", "reps": 12 }
+      ]
+    ],
+    "beaten": [{}, { "reps": 12 }],
+    "bests": { "weight": 10000, "set_volume": 80000, "session_volume": 80000, "reps": 12 }
+  },
+  {
+    "name": "reps only: most reps in a set, and in a workout",
+    "kind": "reps_only",
+    "sessions": [
+      [{ "type": "normal", "reps": 20 }],
+      [
+        { "type": "normal", "reps": 15 },
+        { "type": "normal", "reps": 15 }
+      ]
+    ],
+    "beaten": [{}, { "session_reps": 30 }],
+    "bests": { "reps": 20, "session_reps": 30 }
+  },
+  {
+    "name": "assisted bodyweight keeps reps only",
+    "kind": "assisted_bodyweight",
+    "sessions": [
+      [{ "type": "normal", "weightG": 30000, "reps": 6 }],
+      [{ "type": "normal", "weightG": 20000, "reps": 7 }]
+    ],
+    "beaten": [{}, { "reps": 7, "session_reps": 7 }],
+    "bests": { "reps": 7, "session_reps": 7 }
+  },
+  {
+    "name": "duration: the longest set",
+    "kind": "duration",
+    "sessions": [[{ "type": "normal", "durationS": 60 }], [{ "type": "normal", "durationS": 90 }]],
+    "beaten": [{}, { "duration": 90 }],
+    "bests": { "duration": 90 }
+  },
+  {
+    "name": "distance: a tie is no record",
+    "kind": "distance_duration",
+    "sessions": [
+      [{ "type": "normal", "distanceM": 5000, "durationS": 1500 }],
+      [{ "type": "normal", "distanceM": 5000, "durationS": 1400 }],
+      [{ "type": "normal", "distanceM": 6000, "durationS": 1800 }]
+    ],
+    "beaten": [{}, {}, { "distance": 6000, "duration": 1800 }],
+    "bests": { "distance": 6000, "duration": 1800 }
+  }
+]

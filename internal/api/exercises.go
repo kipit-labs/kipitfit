@@ -57,3 +57,8 @@ func (a *API) deleteExercise(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (a *API) exerciseProgress(w http.ResponseWriter, r *http.Request) {
+	p, err := a.core.ExerciseProgress(r.Context(), user(r), r.PathValue("id"))
+	reply(a, w, http.StatusOK, p, err)
+}

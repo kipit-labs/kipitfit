@@ -93,15 +93,22 @@ type Store interface {
 	// PutWorkout creates the workout or replaces it (exercises and sets too),
 	// in one transaction; ErrNotFound when the id is another user's.
 	PutWorkout(ctx context.Context, w Workout) (Workout, error)
-	// ListWorkouts returns up to limit of the user's workouts without their
-	// exercises, newest first, started before the workout after ("" for the
-	// newest).
+	// ListWorkouts returns up to limit of the user's workouts with their
+	// exercises and sets, newest first, started before the workout after (""
+	// for the newest).
 	ListWorkouts(ctx context.Context, userID, after string, limit int) ([]Workout, error)
+	// WorkoutsSince returns the user's workouts started at or after from, with
+	// their exercises and sets, oldest first.
+	WorkoutsSince(ctx context.Context, userID string, from time.Time) ([]Workout, error)
 	GetWorkout(ctx context.Context, userID, id string) (Workout, error)
 	DeleteWorkout(ctx context.Context, userID, id string) error
 	// PreviousSets returns, per exercise, its sets in the user's latest workout
 	// that has it; exercises never done are left out.
 	PreviousSets(ctx context.Context, userID string, exerciseIDs []string) (map[string][]WorkoutSet, error)
+	// ExerciseSets returns every set the user logged of the exercises, warm-ups
+	// too, oldest workout first and in workout order: what records and
+	// exercise history are worked out from.
+	ExerciseSets(ctx context.Context, userID string, exerciseIDs []string) ([]LoggedSet, error)
 }
 
 type Unit string
@@ -311,6 +318,23 @@ type WorkoutSet struct {
 	RPE               *Tenths `bun:"rpe" json:"rpe"`
 	DurationS         *int    `bun:"duration_s" json:"durationS"`
 	DistanceM         *int    `bun:"distance_m" json:"distanceM"`
+}
+
+// LoggedSet is a set with where it was logged: its workout, and its place in
+// it (Exercise is the workout exercise's position, Set the set's).
+type LoggedSet struct {
+	WorkoutID  string    `bun:"workout_id"`
+	Title      string    `bun:"title"`
+	StartedAt  time.Time `bun:"started_at"`
+	ExerciseID string    `bun:"exercise_id"`
+	Exercise   int       `bun:"exercise"`
+	Set        int       `bun:"set"`
+	Type       SetType   `bun:"type"`
+	WeightG    *int      `bun:"weight_g"`
+	Reps       *int      `bun:"reps"`
+	RPE        *Tenths   `bun:"rpe"`
+	DurationS  *int      `bun:"duration_s"`
+	DistanceM  *int      `bun:"distance_m"`
 }
 
 // Tenths is a number with one decimal kept as an integer count of tenths

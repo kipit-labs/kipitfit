@@ -142,6 +142,21 @@ func TestWorkoutsAPI(t *testing.T) {
 	if w := do(a, "GET", "/api/previous?exercise="+ex.ID+",nope", "", me, ""); !strings.Contains(w.Body.String(), `"`+ex.ID+`":[{"type":"normal","weightG":102058`) {
 		t.Errorf("previous: %s", w.Body)
 	}
+	// A heavier second workout answers with the records it beat; the exercise page and the bests see them.
+	heavier := strings.Replace(strings.Replace(body, "102058", "110000", 1), "2026-11-20", "2026-11-27", 2)
+	if w := do(a, "PUT", "/api/workouts/01JDZ0000000000000000000AB", heavier, me, ""); !strings.Contains(w.Body.String(), `"kind":"weight","value":110000,"previous":102058`) {
+		t.Errorf("records of a heavier workout: %s", w.Body)
+	}
+	if w := do(a, "GET", "/api/exercises/"+ex.ID+"/progress", "", me, ""); w.Code != http.StatusOK ||
+		strings.Count(w.Body.String(), `"workoutId":"01JDZ0000000000000000000AB"`) < 2 || !strings.Contains(w.Body.String(), `"repRecords":[{"reps":1,"weightG":110000`) {
+		t.Errorf("progress: %d %s", w.Code, w.Body)
+	}
+	if w := do(a, "GET", "/api/exercises/"+ex.ID+"/progress", "", friend, ""); w.Code != http.StatusNotFound {
+		t.Errorf("friend sees my custom exercise's progress: %d", w.Code)
+	}
+	if w := do(a, "GET", "/api/bests?exercise="+ex.ID, "", me, ""); !strings.Contains(w.Body.String(), `"weight":110000`) {
+		t.Errorf("bests: %s", w.Body)
+	}
 	if w := do(a, "DELETE", "/api/workouts/"+id, "", friend, ""); w.Code != http.StatusNotFound {
 		t.Errorf("friend deletes my workout: %d", w.Code)
 	}

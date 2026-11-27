@@ -29,20 +29,21 @@ var ulidRE = regexp.MustCompile(`^[0-9A-HJKMNP-TV-Z]{26}$`)
 
 // PutWorkout saves a finished workout under its phone-made id: created the
 // first time, replaced after, so a finish sent twice saves once.
-func (c *Core) PutWorkout(ctx context.Context, me store.User, id string, w store.Workout) (store.Workout, error) {
+// The answer carries the records it beat.
+func (c *Core) PutWorkout(ctx context.Context, me store.User, id string, w store.Workout) (WorkoutView, error) {
 	if !ulidRE.MatchString(id) {
-		return store.Workout{}, ErrWorkoutID
+		return WorkoutView{}, ErrWorkoutID
 	}
 	w.ID, w.UserID = id, me.ID
 	var err error
 	if w.Title, err = title(w.Title); err != nil {
-		return store.Workout{}, err
+		return WorkoutView{}, err
 	}
 	if utf8.RuneCountInString(w.Notes) > maxNotes {
-		return store.Workout{}, ErrNotesTooLong
+		return WorkoutView{}, ErrNotesTooLong
 	}
 	if w.StartedAt.IsZero() || w.EndedAt.Before(w.StartedAt) || w.EndedAt.Sub(w.StartedAt).Hours() > maxWorkoutHours {
-		return store.Workout{}, ErrWorkoutTimes
+		return WorkoutView{}, ErrWorkoutTimes
 	}
 	w.StartedAt, w.EndedAt = w.StartedAt.UTC(), w.EndedAt.UTC()
 	if w.RoutineID != "" {
@@ -50,11 +51,11 @@ func (c *Core) PutWorkout(ctx context.Context, me store.User, id string, w store
 		if _, err := c.store.GetRoutine(ctx, me.ID, w.RoutineID); errors.Is(err, store.ErrNotFound) {
 			w.RoutineID = ""
 		} else if err != nil {
-			return store.Workout{}, err
+			return WorkoutView{}, err
 		}
 	}
 	if len(w.Exercises) > maxExercises {
-		return store.Workout{}, ErrTooManyExercises
+		return WorkoutView{}, ErrTooManyExercises
 	}
 	w.VolumeG = 0
 	sets := 0
@@ -62,30 +63,34 @@ func (c *Core) PutWorkout(ctx context.Context, me store.User, id string, w store
 		we := &w.Exercises[i]
 		e, err := c.GetExercise(ctx, me, we.ExerciseID)
 		if err != nil {
-			return store.Workout{}, err
+			return WorkoutView{}, err
 		}
 		we.Exercise = nil
 		if we.Superset != "" && (len(we.Superset) != 1 || we.Superset[0] < 'A' || we.Superset[0] > 'Z') {
-			return store.Workout{}, ErrSuperset
+			return WorkoutView{}, ErrSuperset
 		}
 		if utf8.RuneCountInString(we.Notes) > maxNotes {
-			return store.Workout{}, ErrNotesTooLong
+			return WorkoutView{}, ErrNotesTooLong
 		}
 		if len(we.Sets) > maxSets {
-			return store.Workout{}, ErrTooManySets
+			return WorkoutView{}, ErrTooManySets
 		}
 		for _, s := range we.Sets {
 			if err := checkSet(e.Kind, s); err != nil {
-				return store.Workout{}, err
+				return WorkoutView{}, err
 			}
 			w.VolumeG += volume(e.Kind, s)
 		}
 		sets += len(we.Sets)
 	}
 	if sets == 0 {
-		return store.Workout{}, ErrWorkoutEmpty
+		return WorkoutView{}, ErrWorkoutEmpty
 	}
-	return c.store.PutWorkout(ctx, w)
+	saved, err := c.store.PutWorkout(ctx, w)
+	if err != nil {
+		return WorkoutView{}, err
+	}
+	return c.workoutView(ctx, me, saved)
 }
 
 // checkSet validates a logged set: the values its exercise takes, the ones it
@@ -123,8 +128,8 @@ func volume(k store.Kind, s store.WorkoutSet) int {
 // Workouts is a page of history, newest first; Next is the cursor of the
 // next page, "" on the last.
 type Workouts struct {
-	Workouts []store.Workout `json:"workouts"`
-	Next     string          `json:"next,omitempty"`
+	Workouts []WorkoutView `json:"workouts"`
+	Next     string        `json:"next,omitempty"`
 }
 
 func (c *Core) ListWorkouts(ctx context.Context, me store.User, after string) (Workouts, error) {
@@ -132,16 +137,29 @@ func (c *Core) ListWorkouts(ctx context.Context, me store.User, after string) (W
 	if err != nil {
 		return Workouts{}, err
 	}
-	page := Workouts{Workouts: ws}
+	page := Workouts{}
 	if len(ws) > workoutsPage {
-		page.Workouts = ws[:workoutsPage]
+		ws = ws[:workoutsPage]
 		page.Next = ws[workoutsPage-1].ID
 	}
-	return page, nil
+	page.Workouts, err = c.withRecords(ctx, me, ws)
+	return page, err
 }
 
-func (c *Core) GetWorkout(ctx context.Context, me store.User, id string) (store.Workout, error) {
-	return c.store.GetWorkout(ctx, me.ID, id)
+func (c *Core) GetWorkout(ctx context.Context, me store.User, id string) (WorkoutView, error) {
+	w, err := c.store.GetWorkout(ctx, me.ID, id)
+	if err != nil {
+		return WorkoutView{}, err
+	}
+	return c.workoutView(ctx, me, w)
+}
+
+func (c *Core) workoutView(ctx context.Context, me store.User, w store.Workout) (WorkoutView, error) {
+	vs, err := c.withRecords(ctx, me, []store.Workout{w})
+	if err != nil {
+		return WorkoutView{}, err
+	}
+	return vs[0], nil
 }
 
 func (c *Core) DeleteWorkout(ctx context.Context, me store.User, id string) error {
