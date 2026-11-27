@@ -4,7 +4,11 @@ package store
 
 import (
 	"context"
+	"database/sql/driver"
 	"errors"
+	"fmt"
+	"math"
+	"strconv"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -50,8 +54,8 @@ type Store interface {
 	// already has a custom exercise with that name (ASCII case ignored).
 	CreateExercise(ctx context.Context, e Exercise) (Exercise, error)
 	UpdateExercise(ctx context.Context, e Exercise) (Exercise, error)
-	// DeleteExercise deletes the exercise, or archives it when a routine
-	// uses it.
+	// DeleteExercise deletes the exercise, or archives it when a routine or a
+	// workout uses it.
 	DeleteExercise(ctx context.Context, id string) error
 
 	// Folders and routines are always scoped to their user: someone else's is
@@ -64,7 +68,8 @@ type Store interface {
 	DeleteFolder(ctx context.Context, userID, id string) error
 
 	// ListRoutines returns the user's routines by position, each with its
-	// exercises (archived ones too) and target sets in order.
+	// exercises (archived ones too) and target sets in order, and when it was
+	// last done.
 	ListRoutines(ctx context.Context, userID string) ([]Routine, error)
 	GetRoutine(ctx context.Context, userID, id string) (Routine, error)
 	// CreateRoutine puts the routine after the user's others.
@@ -76,6 +81,19 @@ type Store interface {
 	// Reorder sets the position of each listed folder and routine to its index,
 	// in one transaction; ErrNotFound when one isn't the user's.
 	Reorder(ctx context.Context, userID string, folders, routines []string) error
+
+	// PutWorkout creates the workout or replaces it (exercises and sets too),
+	// in one transaction; ErrNotFound when the id is another user's.
+	PutWorkout(ctx context.Context, w Workout) (Workout, error)
+	// ListWorkouts returns up to limit of the user's workouts without their
+	// exercises, newest first, started before the workout after ("" for the
+	// newest).
+	ListWorkouts(ctx context.Context, userID, after string, limit int) ([]Workout, error)
+	GetWorkout(ctx context.Context, userID, id string) (Workout, error)
+	DeleteWorkout(ctx context.Context, userID, id string) error
+	// PreviousSets returns, per exercise, its sets in the user's latest workout
+	// that has it; exercises never done are left out.
+	PreviousSets(ctx context.Context, userID string, exerciseIDs []string) (map[string][]WorkoutSet, error)
 }
 
 type Unit string
@@ -176,13 +194,15 @@ type Routine struct {
 	ID     string `bun:"id,pk" json:"id"`
 	UserID string `bun:"user_id" json:"-"`
 	// FolderID is "" when the routine is in no folder.
-	FolderID  string            `bun:"folder_id,nullzero" json:"folderId,omitempty"`
-	Name      string            `bun:"name" json:"name"`
-	Notes     string            `bun:"notes" json:"notes"`
-	Position  int               `bun:"position" json:"-"`
-	CreatedAt time.Time         `bun:"created_at" json:"-"`
-	UpdatedAt time.Time         `bun:"updated_at" json:"-"`
-	Exercises []RoutineExercise `bun:"rel:has-many,join:id=routine_id" json:"exercises"`
+	FolderID  string    `bun:"folder_id,nullzero" json:"folderId,omitempty"`
+	Name      string    `bun:"name" json:"name"`
+	Notes     string    `bun:"notes" json:"notes"`
+	Position  int       `bun:"position" json:"-"`
+	CreatedAt time.Time `bun:"created_at" json:"-"`
+	UpdatedAt time.Time `bun:"updated_at" json:"-"`
+	// LastDoneAt is the end of its latest workout, nil if never done.
+	LastDoneAt *time.Time        `bun:"last_done_at,scanonly" json:"lastDoneAt"`
+	Exercises  []RoutineExercise `bun:"rel:has-many,join:id=routine_id" json:"exercises"`
 }
 
 type RoutineExercise struct {
@@ -223,4 +243,78 @@ type RoutineSet struct {
 	RepsMax           *int    `bun:"reps_max" json:"repsMax"`
 	DurationS         *int    `bun:"duration_s" json:"durationS"`
 	DistanceM         *int    `bun:"distance_m" json:"distanceM"`
+}
+
+type Workout struct {
+	bun.BaseModel `bun:"table:workouts,alias:w" json:"-"`
+
+	// ID is made on the phone when the workout starts.
+	ID     string `bun:"id,pk" json:"id"`
+	UserID string `bun:"user_id" json:"-"`
+	// RoutineID is the routine it started from, "" for none.
+	RoutineID string            `bun:"routine_id,nullzero" json:"routineId,omitempty"`
+	Title     string            `bun:"title" json:"title"`
+	Notes     string            `bun:"notes" json:"notes"`
+	StartedAt time.Time         `bun:"started_at" json:"startedAt"`
+	EndedAt   time.Time         `bun:"ended_at" json:"endedAt"`
+	VolumeG   int               `bun:"volume_g" json:"volumeG"`
+	CreatedAt time.Time         `bun:"created_at" json:"-"`
+	UpdatedAt time.Time         `bun:"updated_at" json:"-"`
+	Exercises []WorkoutExercise `bun:"rel:has-many,join:id=workout_id" json:"exercises,omitempty"`
+}
+
+type WorkoutExercise struct {
+	bun.BaseModel `bun:"table:workout_exercises,alias:we" json:"-"`
+
+	ID         string       `bun:"id,pk" json:"-"`
+	WorkoutID  string       `bun:"workout_id" json:"-"`
+	ExerciseID string       `bun:"exercise_id" json:"exerciseId"`
+	Position   int          `bun:"position" json:"-"`
+	Superset   string       `bun:"superset,nullzero" json:"superset,omitempty"`
+	Notes      string       `bun:"notes" json:"notes"`
+	Exercise   *Exercise    `bun:"rel:belongs-to,join:exercise_id=id" json:"exercise,omitempty"`
+	Sets       []WorkoutSet `bun:"rel:has-many,join:id=workout_exercise_id" json:"sets"`
+}
+
+// WorkoutSet is a logged set; a value its exercise doesn't take is nil.
+type WorkoutSet struct {
+	bun.BaseModel `bun:"table:sets,alias:s" json:"-"`
+
+	WorkoutExerciseID string  `bun:"workout_exercise_id,pk" json:"-"`
+	Position          int     `bun:"position,pk" json:"-"`
+	Type              SetType `bun:"type" json:"type"`
+	WeightG           *int    `bun:"weight_g" json:"weightG"`
+	Reps              *int    `bun:"reps" json:"reps"`
+	RPE               *Tenths `bun:"rpe" json:"rpe"`
+	DurationS         *int    `bun:"duration_s" json:"durationS"`
+	DistanceM         *int    `bun:"distance_m" json:"distanceM"`
+}
+
+// Tenths is a number with one decimal kept as an integer count of tenths
+// (8.5 is 85), written as a plain number in JSON.
+type Tenths int
+
+func (t Tenths) MarshalJSON() ([]byte, error) {
+	return []byte(strconv.FormatFloat(float64(t)/10, 'f', -1, 64)), nil
+}
+
+// Value and Scan keep it an integer in the database (bun would use the JSON).
+func (t Tenths) Value() (driver.Value, error) { return int64(t), nil }
+
+func (t *Tenths) Scan(src any) error {
+	n, ok := src.(int64)
+	if !ok {
+		return fmt.Errorf("tenths: unexpected %T", src)
+	}
+	*t = Tenths(n)
+	return nil
+}
+
+func (t *Tenths) UnmarshalJSON(b []byte) error {
+	f, err := strconv.ParseFloat(string(b), 64)
+	if err != nil {
+		return err
+	}
+	*t = Tenths(math.Round(f * 10))
+	return nil
 }

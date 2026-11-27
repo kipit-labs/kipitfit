@@ -257,6 +257,11 @@
     "too_many_sets": "An exercise holds at most {{max}} sets.",
     "set_type_invalid": "A set has a type the app doesn't know.",
     "set_value_invalid": "A set has a value out of range, or one its exercise doesn't take.",
-    "superset_invalid": "A superset is named by one letter, A to Z."
+    "superset_invalid": "A superset is named by one letter, A to Z.",
+    "workout_id_invalid": "The app sent a workout without a valid id.",
+    "workout_times_invalid": "A workout ends after it starts, within a day.",
+    "workout_empty": "Log at least one set first.",
+    "set_value_missing": "A set is missing a value its exercise needs.",
+    "rpe_invalid": "RPE goes from 6 to 10 in steps of 0.5."
   }
 }

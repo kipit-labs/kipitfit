@@ -110,3 +110,42 @@ func TestRoutinesAPI(t *testing.T) {
 		t.Errorf("delete folder: %d %s", w.Code, w.Body)
 	}
 }
+
+func TestWorkoutsAPI(t *testing.T) {
+	a := newAPI(t)
+	me, friend := twoSessions(t, a)
+	var ex struct{ ID string }
+	w := do(a, "POST", "/api/exercises", `{"name":"Landmine Press","kind":"weight_reps","primaryMuscles":["shoulders"]}`, me, "")
+	_ = json.Unmarshal(w.Body.Bytes(), &ex)
+	id := "01JDZ0000000000000000000AA"
+	body := `{"title":"Push","startedAt":"2026-11-20T18:00:00Z","endedAt":"2026-11-20T19:00:00Z","exercises":[{"exerciseId":"` + ex.ID +
+		`","sets":[{"type":"normal","weightG":102058,"reps":5,"rpe":8.5}]}]}`
+	for range 2 {
+		if w := do(a, "PUT", "/api/workouts/"+id, body, me, ""); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"rpe":8.5`) ||
+			!strings.Contains(w.Body.String(), `"volumeG":510290`) {
+			t.Fatalf("put: %d %s", w.Code, w.Body)
+		}
+	}
+	w = do(a, "GET", "/api/workouts", "", me, "")
+	if strings.Count(w.Body.String(), `"id":"`+id) != 1 {
+		t.Errorf("list after two puts: %s", w.Body)
+	}
+	if w := do(a, "PUT", "/api/workouts/"+id, body, friend, ""); w.Code != http.StatusNotFound {
+		t.Errorf("friend puts my id: %d %s", w.Code, w.Body)
+	}
+	if w := do(a, "GET", "/api/workouts/"+id, "", friend, ""); w.Code != http.StatusNotFound {
+		t.Errorf("friend gets my workout: %d", w.Code)
+	}
+	if w := do(a, "PUT", "/api/workouts/"+id, strings.Replace(body, "8.5", "11", 1), me, ""); code(t, w) != "rpe_invalid" {
+		t.Errorf("rpe 11: %d %s", w.Code, w.Body)
+	}
+	if w := do(a, "GET", "/api/previous?exercise="+ex.ID+",nope", "", me, ""); !strings.Contains(w.Body.String(), `"`+ex.ID+`":[{"type":"normal","weightG":102058`) {
+		t.Errorf("previous: %s", w.Body)
+	}
+	if w := do(a, "DELETE", "/api/workouts/"+id, "", friend, ""); w.Code != http.StatusNotFound {
+		t.Errorf("friend deletes my workout: %d", w.Code)
+	}
+	if w := do(a, "DELETE", "/api/workouts/"+id, "", me, ""); w.Code != http.StatusNoContent {
+		t.Errorf("delete: %d %s", w.Code, w.Body)
+	}
+}
