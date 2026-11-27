@@ -18,9 +18,10 @@ embedded.
 
 ## Screens
 
-Mobile first, installed as a PWA. Coral (#ff6b4a) is kipitfit's colour from the kipit-labs dots; the other dots each
-mark one kind of set, so colour carries meaning on the set table: **W** warm-up (left out of volume and records),
-**D** drop set, **F** to failure, **PR** personal record. Bottom tabs: Feed, Workout, Progress, Me.
+Mobile first, installed as a PWA. Teal (#3dd6b0) is kipitfit's colour: its slot among the ten kipit-labs dots (the
+kipit-labs site's `projects.ts`; coral is kipitrek's, yellow kipitiny's). Other dots each mark one kind of set, so
+colour carries meaning on the set table: **W** warm-up (left out of volume and records), **D** drop set, **F** to
+failure, **PR** personal record. Bottom tabs: Feed, Workout, Progress, Me.
 
 - **Feed** — friends' finished workouts, newest first, paged like kipitrek's feed: title, time, volume, records, the
   first exercises with their set count, kudos and comments under each.
