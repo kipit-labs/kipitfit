@@ -58,7 +58,7 @@ func TestWorkouts(t *testing.T) {
 		t.Fatal(err)
 	}
 	ws, _ := s.ListWorkouts(ctx, a.ID, "", 1)
-	if len(ws) != 1 || ws[0].ID != second || ws[0].Exercises != nil {
+	if len(ws) != 1 || ws[0].ID != second || len(ws[0].Exercises) != 1 || len(ws[0].Exercises[0].Sets) != 2 {
 		t.Fatalf("page 1 = %+v", ws)
 	}
 	ws, _ = s.ListWorkouts(ctx, a.ID, ws[0].ID, 1)
@@ -67,6 +67,19 @@ func TestWorkouts(t *testing.T) {
 	}
 	if ws, _ = s.ListWorkouts(ctx, a.ID, first, 1); len(ws) != 0 {
 		t.Fatalf("page 3 = %+v", ws)
+	}
+
+	since, err := s.WorkoutsSince(ctx, a.ID, start.Add(time.Hour))
+	if err != nil || len(since) != 1 || since[0].ID != second || since[0].Exercises[0].Exercise.Name != "Bench Press" {
+		t.Fatalf("since = %+v, %v", since, err)
+	}
+	rows, err := s.ExerciseSets(ctx, a.ID, []string{bench, row})
+	if err != nil || len(rows) != 4 || rows[0].WorkoutID != first || rows[3].WorkoutID != second ||
+		rows[1].Set != 1 || *rows[1].WeightG != 82500 || !rows[0].StartedAt.Equal(start) || rows[0].Title != "Push" || rows[0].Type != store.SetWarmup {
+		t.Fatalf("exercise sets = %+v, %v", rows, err)
+	}
+	if rows, _ := s.ExerciseSets(ctx, b.ID, []string{bench}); len(rows) != 0 {
+		t.Errorf("b sees a's sets: %+v", rows)
 	}
 
 	prev, err := s.PreviousSets(ctx, a.ID, []string{bench, row})

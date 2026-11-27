@@ -118,6 +118,7 @@ Errors answer `{"error": "...", "code": "...", "params": {...}}`; the app shows 
 | POST | `/api/exercises` | session | `{name, kind, category?, equipment?, primaryMuscles, secondaryMuscles?}`: creates your own exercise. |
 | PATCH | `/api/exercises/{id}` | session | Same fields, all optional. Library exercises answer 403 `library_exercise_readonly`. |
 | DELETE | `/api/exercises/{id}` | session | Deletes your own exercise; one a routine or workout uses is archived instead: hidden from the list, still in routines, its GET says `archived: true`. |
+| GET | `/api/exercises/{id}/progress` | session | `{records, repRecords, sessions}`: your current best of each record kind, the heaviest weight for 1–12 reps, and every workout with it, newest first (`sets`, `best` per record kind, the `records` it beat). Archived exercises too. |
 | GET | `/api/routines` | session | `{folders, routines}` in order; each routine has its `exercises` (with the `exercise` itself, archived too), target `sets` and `lastDoneAt`. |
 | POST | `/api/routines` | session | `{name, notes?, folderId?, exercises: [{exerciseId, superset?, restS?, notes?, sets: [{type, weightG?, repsMin?, repsMax?, durationS?, distanceM?}]}]}`: added after your others. At most 50 exercises and 50 sets each. |
 | PUT | `/api/routines/{id}` | session | Same body: replaces the whole routine. Another user's routine is a 404. |
@@ -127,11 +128,12 @@ Errors answer `{"error": "...", "code": "...", "params": {...}}`; the app shows 
 | POST | `/api/folders` | session | `{name}`: added after your others. |
 | PATCH | `/api/folders/{id}` | session | `{name}`: renames. |
 | DELETE | `/api/folders/{id}` | session | Deletes a folder; its routines stay, in no folder. |
-| PUT | `/api/workouts/{id}` | session | `{title, notes?, routineId?, startedAt, endedAt, exercises: [{exerciseId, superset?, notes?, sets: [{type, weightG?, reps?, rpe?, durationS?, distanceM?}]}]}` under the ULID the phone made at start: creates the workout, or replaces it, so a retried finish saves once. Values follow the exercise kind; `rpe` 6–10 by 0.5. Returns it with `volumeG` (weight × reps of the non-warm-up sets). Another user's id is a 404. |
-| GET | `/api/workouts?after=` | session | `{workouts, next?}`: 20 workouts without their exercises, newest first; pass `next` as `after` for the next page. |
-| GET | `/api/workouts/{id}` | session | One workout with its exercises and sets. |
-| DELETE | `/api/workouts/{id}` | session | Deletes a workout. |
+| PUT | `/api/workouts/{id}` | session | `{title, notes?, routineId?, startedAt, endedAt, exercises: [{exerciseId, superset?, notes?, sets: [{type, weightG?, reps?, rpe?, durationS?, distanceM?}]}]}` under the ULID the phone made at start: creates the workout, or replaces it, so a retried finish saves once. Values follow the exercise kind; `rpe` 6–10 by 0.5. Returns it with `volumeG` (weight × reps of the non-warm-up sets) and the `records` it beat (`{exerciseId, kind, value, previous, exercise, set, …}`; `set` −1 for a workout total). Another user's id is a 404. |
+| GET | `/api/workouts?after=` | session | `{workouts, next?}`: 20 workouts with their exercises, sets and `records`, newest first; pass `next` as `after` for the next page. |
+| GET | `/api/workouts/{id}` | session | One workout with its exercises, sets and `records`. |
+| DELETE | `/api/workouts/{id}` | session | Deletes a workout; records are worked out from what's left. |
 | GET | `/api/previous?exercise=a,b,c` | session | `{exerciseId: sets}`: each exercise's sets in your latest workout that has it (at most 50 exercises). |
+| GET | `/api/bests?exercise=a,b,c` | session | `{exerciseId: {kind: value}}`: your current bests, for spotting records while logging (at most 50 exercises; never-done ones left out). |
 | GET | `/api/library` | session | `{pack, media}`: the imported pack (`name`, `version`, `credit`, `creditUrl`), `null` for the built-in library; whether a media bucket is set. |
 | GET | `/api/media/{key}` | session | A pack picture from the bucket (`media` keys of an exercise), cached for a year. |
 

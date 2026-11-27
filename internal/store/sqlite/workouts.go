@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/uptrace/bun"
 
@@ -68,11 +69,30 @@ func insertWorkoutExercises(ctx context.Context, tx bun.Tx, w store.Workout) err
 
 func (s *Store) ListWorkouts(ctx context.Context, userID, after string, limit int) ([]store.Workout, error) {
 	ws := []store.Workout{}
-	q := s.db.NewSelect().Model(&ws).Where("w.user_id = ?", userID).OrderExpr("w.started_at DESC, w.id DESC").Limit(limit)
+	q := withExercises(s.db.NewSelect().Model(&ws)).Where("w.user_id = ?", userID).OrderExpr("w.started_at DESC, w.id DESC").Limit(limit)
 	if after != "" {
 		q = q.Where("(w.started_at, w.id) < (SELECT a.started_at, a.id FROM workouts AS a WHERE a.id = ? AND a.user_id = ?)", after, userID)
 	}
-	return ws, mapErr(q.Scan(ctx))
+	if err := q.Scan(ctx); err != nil {
+		return nil, mapErr(err)
+	}
+	for i := range ws {
+		fill(&ws[i])
+	}
+	return ws, nil
+}
+
+func (s *Store) WorkoutsSince(ctx context.Context, userID string, from time.Time) ([]store.Workout, error) {
+	ws := []store.Workout{}
+	err := withExercises(s.db.NewSelect().Model(&ws)).Where("w.user_id = ? AND w.started_at >= ?", userID, from.UTC()).
+		OrderExpr("w.started_at, w.id").Scan(ctx)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	for i := range ws {
+		fill(&ws[i])
+	}
+	return ws, nil
 }
 
 func (s *Store) GetWorkout(ctx context.Context, userID, id string) (store.Workout, error) {
@@ -81,16 +101,24 @@ func (s *Store) GetWorkout(ctx context.Context, userID, id string) (store.Workou
 
 func getWorkout(ctx context.Context, db bun.IDB, userID, id string) (store.Workout, error) {
 	var w store.Workout
-	err := db.NewSelect().Model(&w).Where("w.id = ? AND w.user_id = ?", id, userID).
-		Relation("Exercises", func(q *bun.SelectQuery) *bun.SelectQuery { return q.Order("we.position") }).
+	if err := withExercises(db.NewSelect().Model(&w)).Where("w.id = ? AND w.user_id = ?", id, userID).Scan(ctx); err != nil {
+		return store.Workout{}, mapErr(err)
+	}
+	fill(&w)
+	return w, nil
+}
+
+// withExercises loads a workout query's exercises (archived ones too) and sets, in order.
+func withExercises(q *bun.SelectQuery) *bun.SelectQuery {
+	return q.Relation("Exercises", func(q *bun.SelectQuery) *bun.SelectQuery { return q.Order("we.position") }).
 		Relation("Exercises.Exercise", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.ExcludeColumn("instructions", "force", "level", "mechanic", "created_at", "updated_at")
 		}).
-		Relation("Exercises.Sets", func(q *bun.SelectQuery) *bun.SelectQuery { return q.Order("s.position") }).
-		Scan(ctx)
-	if err != nil {
-		return store.Workout{}, mapErr(err)
-	}
+		Relation("Exercises.Sets", func(q *bun.SelectQuery) *bun.SelectQuery { return q.Order("s.position") })
+}
+
+// fill sets what a loaded workout's JSON needs: exercise flags and empty lists rather than null.
+func fill(w *store.Workout) {
 	for i := range w.Exercises {
 		if e := w.Exercises[i].Exercise; e != nil {
 			flags(e)
@@ -102,7 +130,6 @@ func getWorkout(ctx context.Context, db bun.IDB, userID, id string) (store.Worko
 	if w.Exercises == nil {
 		w.Exercises = []store.WorkoutExercise{}
 	}
-	return w, nil
 }
 
 func (s *Store) DeleteWorkout(ctx context.Context, userID, id string) error {
@@ -130,4 +157,20 @@ func (s *Store) PreviousSets(ctx context.Context, userID string, exerciseIDs []s
 		out[ex] = sets
 	}
 	return out, nil
+}
+
+func (s *Store) ExerciseSets(ctx context.Context, userID string, exerciseIDs []string) ([]store.LoggedSet, error) {
+	out := []store.LoggedSet{}
+	if len(exerciseIDs) == 0 {
+		return out, nil
+	}
+	err := s.db.NewSelect().TableExpr("sets AS s").
+		Join("JOIN workout_exercises AS we ON we.id = s.workout_exercise_id").
+		Join("JOIN workouts AS w ON w.id = we.workout_id").
+		ColumnExpr("w.id AS workout_id, w.title, w.started_at, we.exercise_id, we.position AS exercise").
+		ColumnExpr(`s.position AS "set", s.type, s.weight_g, s.reps, s.rpe, s.duration_s, s.distance_m`).
+		Where("w.user_id = ? AND we.exercise_id IN (?)", userID, bun.In(exerciseIDs)).
+		OrderExpr("w.started_at, w.id, we.position, s.position").
+		Scan(ctx, &out)
+	return out, mapErr(err)
 }
