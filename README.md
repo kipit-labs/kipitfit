@@ -18,6 +18,35 @@ Invite-only, English and French, kg and lb.
 **Status: skeleton.** Accounts work (first admin, sign-in, invites, profile). Exercises, routines, workouts,
 records, friends and import come next; see [docs/design.md](docs/design.md) for the plan.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td width="25%"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/routines-dark.png">
+  <img alt="Routines grouped in a folder, each with when it was last done and a button to start it" src="docs/screenshots/routines-light.png">
+</picture></td>
+    <td width="25%"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/live-dark.png">
+  <img alt="A live workout: sets ticked off against last time's, duration, volume and the rest timer" src="docs/screenshots/live-light.png">
+</picture></td>
+    <td width="25%"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/routine-dark.png">
+  <img alt="Editing a routine: rest time, warm-up and working sets with target weights and rep ranges" src="docs/screenshots/routine-light.png">
+</picture></td>
+    <td width="25%"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/exercises-dark.png">
+  <img alt="The exercise library, searchable and filtered by muscle, equipment and category" src="docs/screenshots/exercises-light.png">
+</picture></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Routines, in folders</sub></td>
+    <td align="center"><sub>Log sets against last time, with a rest timer</sub></td>
+    <td align="center"><sub>Plan sets, reps and rest</sub></td>
+    <td align="center"><sub>Over 850 exercises, or your own</sub></td>
+  </tr>
+</table>
+
 ## Quick start
 
 ```sh
