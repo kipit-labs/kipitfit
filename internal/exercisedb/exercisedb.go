@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 //go:embed exercises.json
@@ -20,22 +20,25 @@ var data []byte
 // the data did not.
 const rules = "1"
 
+// Dataset is the embedded library, the domain.ExerciseDataset.
+type Dataset struct{}
+
 // Version identifies the embedded data and mapping rules.
-func Version() string {
+func (Dataset) Version() string {
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:8]) + "-" + rules
 }
 
 // Load returns the library, each exercise with its Kind.
-func Load() ([]store.Exercise, error) {
+func (Dataset) Load() ([]domain.Exercise, error) {
 	var rows []struct {
-		Slug string `json:"slug"` // store.Exercise keeps its own Slug out of JSON
-		store.Exercise
+		Slug string `json:"slug"` // domain.Exercise keeps its own Slug out of JSON
+		domain.Exercise
 	}
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return nil, err
 	}
-	exs := make([]store.Exercise, len(rows))
+	exs := make([]domain.Exercise, len(rows))
 	for i, r := range rows {
 		r.Exercise.Slug = r.Slug
 		r.Kind = Kind(r.Exercise)
@@ -46,23 +49,23 @@ func Load() ([]store.Exercise, error) {
 
 // Kind guesses what a set of a library exercise records, from its category,
 // equipment, force and name; the dataset has no such field.
-func Kind(e store.Exercise) store.Kind {
+func Kind(e domain.Exercise) domain.Kind {
 	bodyweight := e.Equipment == "body_only" || e.Equipment == "none"
 	switch {
 	case e.Category == "stretching":
-		return store.KindDuration
+		return domain.KindDuration
 	case e.Category == "cardio":
-		return store.KindDistanceDuration
+		return domain.KindDistanceDuration
 	case strings.Contains(e.Name, "Assisted"):
-		return store.KindAssistedBodyweight
+		return domain.KindAssistedBodyweight
 	// "Weighted Pull Ups" and "Weighted Bench Dip" list their belt or plate as "other".
 	case strings.Contains(e.Name, "Weighted") && (bodyweight || e.Equipment == "other"):
-		return store.KindWeightedBodyweight
+		return domain.KindWeightedBodyweight
 	case bodyweight && e.Force == "static": // planks, side bridges, isometric holds
-		return store.KindDuration
+		return domain.KindDuration
 	case bodyweight:
-		return store.KindRepsOnly
+		return domain.KindRepsOnly
 	default:
-		return store.KindWeightReps
+		return domain.KindWeightReps
 	}
 }

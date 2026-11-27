@@ -10,16 +10,14 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kipit-labs/kipitfit/internal/media"
-	"github.com/kipit-labs/kipitfit/internal/pack"
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 // Library is what the Me tab shows about the exercise library.
 type Library struct {
 	// Pack is nil for the built-in library.
-	Pack  *store.Pack `json:"pack"`
-	Media bool        `json:"media"`
+	Pack  *domain.Pack `json:"pack"`
+	Media bool         `json:"media"`
 }
 
 func (c *Core) Library(ctx context.Context) (Library, error) {
@@ -27,7 +25,7 @@ func (c *Core) Library(ctx context.Context) (Library, error) {
 	p, err := c.store.LibraryPack(ctx)
 	if err == nil {
 		l.Pack = &p
-	} else if !errors.Is(err, store.ErrNotFound) {
+	} else if !errors.Is(err, domain.ErrNotFound) {
 		return Library{}, err
 	}
 	return l, nil
@@ -35,7 +33,7 @@ func (c *Core) Library(ctx context.Context) (Library, error) {
 
 // Imported reports what ImportPack did.
 type Imported struct {
-	store.Replaced
+	domain.Replaced
 	Uploaded, Skipped int
 }
 
@@ -44,7 +42,7 @@ type Imported struct {
 // and workouts on an old library exercise move to the pack exercise with the
 // same name and kind; the old exercises are archived (hidden, still valid),
 // so nothing that uses them breaks.
-func (c *Core) ImportPack(ctx context.Context, p pack.Pack) (Imported, error) {
+func (c *Core) ImportPack(ctx context.Context, p domain.ParsedPack) (Imported, error) {
 	if c.media == nil {
 		return Imported{}, errors.New("media is off: set KIPITFIT_S3_ENDPOINT and the other KIPITFIT_S3_* settings")
 	}
@@ -52,12 +50,12 @@ func (c *Core) ImportPack(ctx context.Context, p pack.Pack) (Imported, error) {
 		return Imported{}, errors.New("the pack has no exercises")
 	}
 	var res Imported
-	exs := make([]store.Exercise, len(p.Exercises))
-	var files []pack.File
+	exs := make([]domain.Exercise, len(p.Exercises))
+	var files []domain.PackFile
 	for i, e := range p.Exercises {
 		e.Media = []string{}
 		for _, f := range e.Files {
-			if !media.ValidKey(f.Key) {
+			if !domain.ValidMediaKey(f.Key) {
 				return Imported{}, fmt.Errorf("pack media key %q isn't servable", f.Key)
 			}
 			e.Media = append(e.Media, f.Key)
@@ -73,7 +71,7 @@ func (c *Core) ImportPack(ctx context.Context, p pack.Pack) (Imported, error) {
 			if _, err := c.media.Stat(gctx, f.Key); err == nil {
 				skipped.Add(1)
 				return nil
-			} else if !errors.Is(err, media.ErrNotFound) {
+			} else if !errors.Is(err, domain.ErrNotFound) {
 				return fmt.Errorf("%s: %w", f.Key, err)
 			}
 			r, err := f.Open()
@@ -104,13 +102,13 @@ func (c *Core) ImportPack(ctx context.Context, p pack.Pack) (Imported, error) {
 // repoint matches each current library exercise the pack doesn't have to the
 // pack exercise with the same name (case, spaces and punctuation ignored) and
 // kind, so its routine targets and logged sets still fit.
-func (c *Core) repoint(ctx context.Context, exs []store.Exercise) (map[string]string, error) {
+func (c *Core) repoint(ctx context.Context, exs []domain.Exercise) (map[string]string, error) {
 	current, err := c.store.ListExercises(ctx, "") // no owner: the library only
 	if err != nil {
 		return nil, err
 	}
 	bySlug := map[string]bool{}
-	byName := map[string]store.Exercise{}
+	byName := map[string]domain.Exercise{}
 	for _, e := range exs {
 		bySlug[e.Slug] = true
 		if _, dup := byName[normName(e.Name)]; !dup {

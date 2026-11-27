@@ -9,18 +9,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
 // recordCase is one case of testdata/records.json, which web/src/lib/records.test.ts runs too, so the phone and the
 // server agree on what a record is.
 type recordCase struct {
-	Name     string               `json:"name"`
-	Kind     store.Kind           `json:"kind"`
-	Sessions [][]store.WorkoutSet `json:"sessions"`
-	Beaten   []map[RecordKind]int `json:"beaten"`
-	Bests    map[RecordKind]int   `json:"bests"`
+	Name     string                `json:"name"`
+	Kind     domain.Kind           `json:"kind"`
+	Sessions [][]domain.WorkoutSet `json:"sessions"`
+	Beaten   []map[RecordKind]int  `json:"beaten"`
+	Bests    map[RecordKind]int    `json:"bests"`
 }
 
 func TestRecordsFixture(t *testing.T) {
@@ -35,10 +35,10 @@ func TestRecordsFixture(t *testing.T) {
 	start := time.Date(2026, 1, 1, 8, 0, 0, 0, time.UTC)
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			var rows []store.LoggedSet
+			var rows []domain.LoggedSet
 			for i, sets := range tc.Sessions {
 				for j, s := range sets {
-					rows = append(rows, store.LoggedSet{WorkoutID: fmt.Sprint(i), StartedAt: start.AddDate(0, 0, i), Set: j,
+					rows = append(rows, domain.LoggedSet{WorkoutID: fmt.Sprint(i), StartedAt: start.AddDate(0, 0, i), Set: j,
 						Type: s.Type, WeightG: s.WeightG, Reps: s.Reps, DurationS: s.DurationS, DistanceM: s.DistanceM})
 				}
 			}
@@ -84,17 +84,17 @@ func TestE1RM(t *testing.T) {
 func TestRecordsInWorkouts(t *testing.T) {
 	ctx := context.Background()
 	c, me, friend := twoUsers(t)
-	lift := byKind(t, c, me, store.KindWeightReps)
+	lift := byKind(t, c, me, domain.KindWeightReps)
 	start := time.Date(2026, 3, 2, 18, 0, 0, 0, time.UTC)
 	put := func(id string, day int, sets ...[2]int) WorkoutView {
 		t.Helper()
-		ss := []store.WorkoutSet{}
+		ss := []domain.WorkoutSet{}
 		for _, s := range sets {
-			ss = append(ss, store.WorkoutSet{Type: store.SetNormal, WeightG: ptr(s[0]), Reps: ptr(s[1])})
+			ss = append(ss, domain.WorkoutSet{Type: domain.SetNormal, WeightG: ptr(s[0]), Reps: ptr(s[1])})
 		}
 		at := start.AddDate(0, 0, day)
-		w, err := c.PutWorkout(ctx, me, id, store.Workout{Title: "Push", StartedAt: at, EndedAt: at.Add(time.Hour),
-			Exercises: []store.WorkoutExercise{{ExerciseID: lift.ID, Sets: ss}}})
+		w, err := c.PutWorkout(ctx, me, id, domain.Workout{Title: "Push", StartedAt: at, EndedAt: at.Add(time.Hour),
+			Exercises: []domain.WorkoutExercise{{ExerciseID: lift.ID, Sets: ss}}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -146,7 +146,7 @@ func TestRecordsInWorkouts(t *testing.T) {
 	if len(p.RepRecords) != 5 || p.RepRecords[0].WeightG != 110000 || p.RepRecords[4].Reps != 5 {
 		t.Errorf("rep records = %+v", p.RepRecords)
 	}
-	if len(p.Records) != len(RecordKinds(store.KindWeightReps)) || p.Records[0].Kind != RecordE1RM {
+	if len(p.Records) != len(RecordKinds(domain.KindWeightReps)) || p.Records[0].Kind != RecordE1RM {
 		t.Errorf("records = %+v", p.Records)
 	}
 

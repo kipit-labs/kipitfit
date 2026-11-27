@@ -18,7 +18,7 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/core"
-	"github.com/kipit-labs/kipitfit/internal/media"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
 )
 
@@ -30,7 +30,7 @@ type testApp struct {
 }
 
 // newTestApp serves wire() on a fresh database; m is nil for media off.
-func newTestApp(t *testing.T, m media.Store) *testApp {
+func newTestApp(t *testing.T, m domain.MediaStore) *testApp {
 	t.Helper()
 	ctx := context.Background()
 	st, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "kipitfit.db"))

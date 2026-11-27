@@ -13,9 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"golang.org/x/crypto/bcrypt"
-
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 const (
@@ -26,12 +24,9 @@ const (
 	maxNameLength    = 80
 )
 
-// dummyHash keeps login timing the same whether or not the user exists.
-var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("kipitfit-dummy-password"), bcrypt.DefaultCost)
-
 type AuthState struct {
-	SetupRequired bool        `json:"setupRequired"`
-	User          *store.User `json:"user,omitempty"`
+	SetupRequired bool         `json:"setupRequired"`
+	User          *domain.User `json:"user,omitempty"`
 }
 
 // InitAuth creates the one-time token required to create the first admin,
@@ -62,7 +57,7 @@ func (c *Core) AuthState(ctx context.Context, sessionToken string) (AuthState, e
 		return AuthState{SetupRequired: true}, nil
 	}
 	u, err := c.Authenticate(ctx, sessionToken)
-	if errors.Is(err, ErrUnauthorized) {
+	if errors.Is(err, domain.ErrUnauthorized) {
 		return AuthState{}, nil
 	}
 	if err != nil {
@@ -72,29 +67,29 @@ func (c *Core) AuthState(ctx context.Context, sessionToken string) (AuthState, e
 }
 
 // Setup creates the first admin account and returns a session token.
-func (c *Core) Setup(ctx context.Context, setupToken, email, name, password string) (store.User, string, error) {
+func (c *Core) Setup(ctx context.Context, setupToken, email, name, password string) (domain.User, string, error) {
 	c.setupMu.Lock()
 	defer c.setupMu.Unlock()
 
 	if n, err := c.store.CountUsers(ctx); err != nil {
-		return store.User{}, "", err
+		return domain.User{}, "", err
 	} else if n > 0 {
-		return store.User{}, "", ErrSetupDone
+		return domain.User{}, "", ErrSetupDone
 	}
 	if c.setupToken == "" || subtle.ConstantTimeCompare([]byte(strings.TrimSpace(setupToken)), []byte(c.setupToken)) != 1 {
-		return store.User{}, "", ErrWrongSetupToken
+		return domain.User{}, "", ErrWrongSetupToken
 	}
 	email, err := normalizeEmail(email)
 	if err != nil {
-		return store.User{}, "", err
+		return domain.User{}, "", err
 	}
-	u, err := newUser(email, name, password)
+	u, err := c.newUser(email, name, password)
 	if err != nil {
-		return store.User{}, "", err
+		return domain.User{}, "", err
 	}
 	u.IsAdmin = true
 	if u, err = c.store.CreateUser(ctx, u); err != nil {
-		return store.User{}, "", err
+		return domain.User{}, "", err
 	}
 	c.setupToken = ""
 	token, err := c.newSession(ctx, u.ID)
@@ -102,17 +97,17 @@ func (c *Core) Setup(ctx context.Context, setupToken, email, name, password stri
 }
 
 // Login checks an email and password and returns the user and a new session token.
-func (c *Core) Login(ctx context.Context, email, password string) (store.User, string, error) {
+func (c *Core) Login(ctx context.Context, email, password string) (domain.User, string, error) {
 	u, err := c.store.GetUserByEmail(ctx, strings.ToLower(strings.TrimSpace(email)))
-	if errors.Is(err, store.ErrNotFound) {
-		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
-		return store.User{}, "", ErrWrongCredentials
+	if errors.Is(err, domain.ErrNotFound) {
+		_ = c.hasher.Compare(c.dummyHash(), password)
+		return domain.User{}, "", ErrWrongCredentials
 	}
 	if err != nil {
-		return store.User{}, "", err
+		return domain.User{}, "", err
 	}
-	if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) != nil {
-		return store.User{}, "", ErrWrongCredentials
+	if c.hasher.Compare(u.PasswordHash, password) != nil {
+		return domain.User{}, "", ErrWrongCredentials
 	}
 	_ = c.store.DeleteExpiredSessions(ctx)
 	token, err := c.newSession(ctx, u.ID)
@@ -120,20 +115,20 @@ func (c *Core) Login(ctx context.Context, email, password string) (store.User, s
 }
 
 // Authenticate returns the user a session token belongs to.
-func (c *Core) Authenticate(ctx context.Context, sessionToken string) (store.User, error) {
+func (c *Core) Authenticate(ctx context.Context, sessionToken string) (domain.User, error) {
 	if sessionToken == "" {
-		return store.User{}, ErrSignedOut
+		return domain.User{}, ErrSignedOut
 	}
 	sess, err := c.store.GetSession(ctx, hashToken(sessionToken))
-	if errors.Is(err, store.ErrNotFound) {
-		return store.User{}, ErrSignedOut
+	if errors.Is(err, domain.ErrNotFound) {
+		return domain.User{}, ErrSignedOut
 	}
 	if err != nil {
-		return store.User{}, err
+		return domain.User{}, err
 	}
 	u, err := c.store.GetUser(ctx, sess.UserID)
-	if errors.Is(err, store.ErrNotFound) {
-		return store.User{}, ErrSignedOut
+	if errors.Is(err, domain.ErrNotFound) {
+		return domain.User{}, ErrSignedOut
 	}
 	return u, err
 }
@@ -147,7 +142,7 @@ func (c *Core) Logout(ctx context.Context, sessionToken string) error {
 
 func (c *Core) newSession(ctx context.Context, userID string) (string, error) {
 	token := randomToken(32)
-	err := c.store.CreateSession(ctx, store.Session{
+	err := c.store.CreateSession(ctx, domain.Session{
 		TokenHash: hashToken(token),
 		UserID:    userID,
 		ExpiresAt: time.Now().Add(SessionTTL),
@@ -156,19 +151,19 @@ func (c *Core) newSession(ctx context.Context, userID string) (string, error) {
 }
 
 // newUser checks name and password and hashes the password.
-func newUser(email, name, password string) (store.User, error) {
+func (c *Core) newUser(email, name, password string) (domain.User, error) {
 	name = strings.TrimSpace(name)
 	if utf8.RuneCountInString(name) > maxNameLength {
-		return store.User{}, ErrNameTooLong
+		return domain.User{}, ErrNameTooLong
 	}
 	if err := validatePassword(password); err != nil {
-		return store.User{}, err
+		return domain.User{}, err
 	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := c.hasher.Hash(password)
 	if err != nil {
-		return store.User{}, err
+		return domain.User{}, err
 	}
-	return store.User{Email: email, Name: name, PasswordHash: string(hash)}, nil
+	return domain.User{Email: email, Name: name, PasswordHash: hash}, nil
 }
 
 func validatePassword(p string) error {

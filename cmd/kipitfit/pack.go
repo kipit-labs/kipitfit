@@ -18,6 +18,8 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/core"
+	"github.com/kipit-labs/kipitfit/internal/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
 	"github.com/kipit-labs/kipitfit/internal/pack"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
 )
@@ -100,7 +102,7 @@ func packCmd(args []string) error {
 	}
 	defer st.Close()
 	start := time.Now()
-	res, err := core.New(cfg, st, m, log).ImportPack(ctx, p)
+	res, err := core.New(cfg, st, security.NewBcryptHasher(0), exercisedb.Dataset{}, m, log).ImportPack(ctx, p)
 	if err != nil {
 		return err
 	}

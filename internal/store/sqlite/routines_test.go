@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -13,27 +13,27 @@ func ptr[T any](v T) *T { return &v }
 func TestRoutines(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
-	a, _ := s.CreateUser(ctx, store.User{Email: "a@b.c", PasswordHash: "h"})
-	b, _ := s.CreateUser(ctx, store.User{Email: "b@b.c", PasswordHash: "h"})
-	if _, err := s.SyncLibrary(ctx, "v1", []store.Exercise{libraryRow("bench", "Bench Press"), libraryRow("row", "Row")}); err != nil {
+	a, _ := s.CreateUser(ctx, domain.User{Email: "a@b.c", PasswordHash: "h"})
+	b, _ := s.CreateUser(ctx, domain.User{Email: "b@b.c", PasswordHash: "h"})
+	if _, err := s.SyncLibrary(ctx, "v1", []domain.Exercise{libraryRow("bench", "Bench Press"), libraryRow("row", "Row")}); err != nil {
 		t.Fatal(err)
 	}
 	lib, _ := s.ListExercises(ctx, a.ID)
 	bench, row := lib[0].ID, lib[1].ID
 
-	push, err := s.CreateFolder(ctx, store.Folder{UserID: a.ID, Name: "Push"})
+	push, err := s.CreateFolder(ctx, domain.Folder{UserID: a.ID, Name: "Push"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	pull, _ := s.CreateFolder(ctx, store.Folder{UserID: a.ID, Name: "Pull"})
+	pull, _ := s.CreateFolder(ctx, domain.Folder{UserID: a.ID, Name: "Pull"})
 	if push.Position != 0 || pull.Position != 1 {
 		t.Errorf("folder positions = %d, %d", push.Position, pull.Position)
 	}
 
-	r, err := s.CreateRoutine(ctx, store.Routine{UserID: a.ID, FolderID: push.ID, Name: "Push A", Exercises: []store.RoutineExercise{
-		{ExerciseID: bench, Superset: "A", RestS: ptr(90), Sets: []store.RoutineSet{
-			{Type: store.SetWarmup, WeightG: ptr(40000), RepsMin: ptr(10), RepsMax: ptr(10)},
-			{Type: store.SetNormal, WeightG: ptr(80000), RepsMin: ptr(6), RepsMax: ptr(8)},
+	r, err := s.CreateRoutine(ctx, domain.Routine{UserID: a.ID, FolderID: push.ID, Name: "Push A", Exercises: []domain.RoutineExercise{
+		{ExerciseID: bench, Superset: "A", RestS: ptr(90), Sets: []domain.RoutineSet{
+			{Type: domain.SetWarmup, WeightG: ptr(40000), RepsMin: ptr(10), RepsMax: ptr(10)},
+			{Type: domain.SetNormal, WeightG: ptr(80000), RepsMin: ptr(6), RepsMax: ptr(8)},
 		}},
 		{ExerciseID: row, Superset: "A"},
 	}})
@@ -41,21 +41,21 @@ func TestRoutines(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(r.Exercises) != 2 || r.Exercises[0].Exercise.Name != "Bench Press" || len(r.Exercises[0].Sets) != 2 ||
-		r.Exercises[0].Sets[0].Type != store.SetWarmup || *r.Exercises[0].Sets[1].WeightG != 80000 ||
+		r.Exercises[0].Sets[0].Type != domain.SetWarmup || *r.Exercises[0].Sets[1].WeightG != 80000 ||
 		*r.Exercises[0].RestS != 90 || r.Exercises[1].RestS != nil || len(r.Exercises[1].Sets) != 0 {
 		t.Fatalf("created = %+v", r)
 	}
 	if r.Exercises[0].Exercise.Instructions != nil {
 		t.Error("a routine's exercises leave instructions out")
 	}
-	r2, _ := s.CreateRoutine(ctx, store.Routine{UserID: a.ID, Name: "Empty"})
+	r2, _ := s.CreateRoutine(ctx, domain.Routine{UserID: a.ID, Name: "Empty"})
 	if r2.Position != 1 || len(r2.Exercises) != 0 {
 		t.Errorf("second routine = %+v", r2)
 	}
 
 	// Replace: one exercise, the folder gone.
 	r.FolderID, r.Name = "", "Push B"
-	r.Exercises = []store.RoutineExercise{{ExerciseID: row, Notes: "slow", Sets: []store.RoutineSet{{Type: store.SetFailure}}}}
+	r.Exercises = []domain.RoutineExercise{{ExerciseID: row, Notes: "slow", Sets: []domain.RoutineSet{{Type: domain.SetFailure}}}}
 	if r, err = s.UpdateRoutine(ctx, r); err != nil {
 		t.Fatal(err)
 	}
@@ -65,19 +65,19 @@ func TestRoutines(t *testing.T) {
 	}
 
 	// Someone else's: not found, and untouched.
-	if _, err := s.GetRoutine(ctx, b.ID, r.ID); !errors.Is(err, store.ErrNotFound) {
+	if _, err := s.GetRoutine(ctx, b.ID, r.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("b gets a's routine: %v", err)
 	}
-	if _, err := s.UpdateRoutine(ctx, store.Routine{ID: r.ID, UserID: b.ID, Name: "x"}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := s.UpdateRoutine(ctx, domain.Routine{ID: r.ID, UserID: b.ID, Name: "x"}); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("b updates a's routine: %v", err)
 	}
-	if err := s.DeleteRoutine(ctx, b.ID, r.ID); !errors.Is(err, store.ErrNotFound) {
+	if err := s.DeleteRoutine(ctx, b.ID, r.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("b deletes a's routine: %v", err)
 	}
-	if err := s.RenameFolder(ctx, store.Folder{ID: push.ID, UserID: b.ID, Name: "x"}); !errors.Is(err, store.ErrNotFound) {
+	if err := s.RenameFolder(ctx, domain.Folder{ID: push.ID, UserID: b.ID, Name: "x"}); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("b renames a's folder: %v", err)
 	}
-	if err := s.Reorder(ctx, b.ID, nil, []string{r.ID}); !errors.Is(err, store.ErrNotFound) {
+	if err := s.Reorder(ctx, b.ID, nil, []string{r.ID}); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("b reorders a's routine: %v", err)
 	}
 	if got, _ := s.ListRoutines(ctx, b.ID); len(got) != 0 {
@@ -104,7 +104,7 @@ func TestRoutines(t *testing.T) {
 	if err := s.DeleteRoutine(ctx, a.ID, r.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.GetRoutine(ctx, a.ID, r.ID); !errors.Is(err, store.ErrNotFound) {
+	if _, err := s.GetRoutine(ctx, a.ID, r.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("deleted routine: %v", err)
 	}
 }
@@ -112,11 +112,11 @@ func TestRoutines(t *testing.T) {
 func TestDeleteUsedExerciseArchives(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
-	a, _ := s.CreateUser(ctx, store.User{Email: "a@b.c", PasswordHash: "h"})
-	mine := store.Exercise{OwnerID: a.ID, Name: "Landmine Press", Kind: store.KindWeightReps, Category: "strength",
+	a, _ := s.CreateUser(ctx, domain.User{Email: "a@b.c", PasswordHash: "h"})
+	mine := domain.Exercise{OwnerID: a.ID, Name: "Landmine Press", Kind: domain.KindWeightReps, Category: "strength",
 		Equipment: "barbell", PrimaryMuscles: []string{"shoulders"}}
 	used, _ := s.CreateExercise(ctx, mine)
-	r, err := s.CreateRoutine(ctx, store.Routine{UserID: a.ID, Name: "R", Exercises: []store.RoutineExercise{{ExerciseID: used.ID}}})
+	r, err := s.CreateRoutine(ctx, domain.Routine{UserID: a.ID, Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: used.ID}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestDeleteUsedExerciseArchives(t *testing.T) {
 	if err := s.DeleteExercise(ctx, used.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.GetExercise(ctx, used.ID); !errors.Is(err, store.ErrNotFound) {
+	if _, err := s.GetExercise(ctx, used.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("unused archived exercise after delete: %v", err)
 	}
 }

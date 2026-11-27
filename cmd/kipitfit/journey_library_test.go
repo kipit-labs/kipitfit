@@ -8,29 +8,28 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
 	"github.com/kipit-labs/kipitfit/internal/media"
-	"github.com/kipit-labs/kipitfit/internal/pack"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
 type library struct {
-	Pack  *store.Pack
+	Pack  *domain.Pack
 	Media bool
 }
 
 // A synthetic pack: third-party packs are never committed.
-func testPack(squat exercise) pack.Pack {
-	file := func(key string) pack.File {
-		return pack.File{Key: key, ContentType: "image/webp", Size: 8,
+func testPack(squat exercise) domain.ParsedPack {
+	file := func(key string) domain.PackFile {
+		return domain.PackFile{Key: key, ContentType: "image/webp", Size: 8,
 			Open: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("RIFFwebp")), nil }}
 	}
-	return pack.Pack{
-		Pack: store.Pack{Name: "test", Version: "1", Credit: "Exercise data by Test", CreditURL: "https://example.com"},
-		Exercises: []pack.Exercise{{
-			Exercise: store.Exercise{Slug: "test:squat", Name: "barbell squat", Kind: store.KindWeightReps, Category: "strength",
+	return domain.ParsedPack{
+		Pack: domain.Pack{Name: "test", Version: "1", Credit: "Exercise data by Test", CreditURL: "https://example.com"},
+		Exercises: []domain.PackExercise{{
+			Exercise: domain.Exercise{Slug: "test:squat", Name: "barbell squat", Kind: domain.KindWeightReps, Category: "strength",
 				Equipment: "barbell", PrimaryMuscles: squat.PrimaryMuscles},
-			Files: []pack.File{file("packs/test/1/squat-start.webp"), file("packs/test/1/squat-end.webp")},
+			Files: []domain.PackFile{file("packs/test/1/squat-start.webp"), file("packs/test/1/squat-end.webp")},
 		}},
 	}
 }

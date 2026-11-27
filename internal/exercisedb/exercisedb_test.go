@@ -3,25 +3,25 @@ package exercisedb
 import (
 	"testing"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 func TestKind(t *testing.T) {
 	for _, c := range []struct {
 		name, category, equipment, force string
-		want                             store.Kind
+		want                             domain.Kind
 	}{
-		{"Barbell Bench Press - Medium Grip", "strength", "barbell", "push", store.KindWeightReps},
-		{"Pullups", "strength", "body_only", "pull", store.KindRepsOnly},
-		{"Plank", "strength", "body_only", "static", store.KindDuration},
-		{"Hamstring Stretch", "stretching", "none", "static", store.KindDuration},
-		{"Running, Treadmill", "cardio", "machine", "", store.KindDistanceDuration},
-		{"Band Assisted Pull-Up", "strength", "other", "pull", store.KindAssistedBodyweight},
-		{"Weighted Pull Ups", "strength", "other", "pull", store.KindWeightedBodyweight},
-		{"Weighted Jump Squat", "strength", "barbell", "push", store.KindWeightReps},
-		{"Weighted Crunches", "strength", "medicine_ball", "pull", store.KindWeightReps},
+		{"Barbell Bench Press - Medium Grip", "strength", "barbell", "push", domain.KindWeightReps},
+		{"Pullups", "strength", "body_only", "pull", domain.KindRepsOnly},
+		{"Plank", "strength", "body_only", "static", domain.KindDuration},
+		{"Hamstring Stretch", "stretching", "none", "static", domain.KindDuration},
+		{"Running, Treadmill", "cardio", "machine", "", domain.KindDistanceDuration},
+		{"Band Assisted Pull-Up", "strength", "other", "pull", domain.KindAssistedBodyweight},
+		{"Weighted Pull Ups", "strength", "other", "pull", domain.KindWeightedBodyweight},
+		{"Weighted Jump Squat", "strength", "barbell", "push", domain.KindWeightReps},
+		{"Weighted Crunches", "strength", "medicine_ball", "pull", domain.KindWeightReps},
 	} {
-		e := store.Exercise{Name: c.name, Category: c.category, Equipment: c.equipment, Force: c.force}
+		e := domain.Exercise{Name: c.name, Category: c.category, Equipment: c.equipment, Force: c.force}
 		if got := Kind(e); got != c.want {
 			t.Errorf("Kind(%q) = %s, want %s", c.name, got, c.want)
 		}
@@ -29,7 +29,7 @@ func TestKind(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
-	exs, err := Load()
+	exs, err := Dataset{}.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestLoad(t *testing.T) {
 	if !slugs["Barbell_Bench_Press_-_Medium_Grip"] {
 		t.Error("bench press missing")
 	}
-	if Version() == "" {
+	if (Dataset{}).Version() == "" {
 		t.Error("no version")
 	}
 }

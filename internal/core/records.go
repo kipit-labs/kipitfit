@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 // RecordKind names a best an exercise can have. Values are grams, reps,
@@ -38,18 +38,18 @@ const e1rmMaxReps = 12
 
 // RecordKinds lists the records an exercise kind keeps, in display order.
 // Assisted bodyweight keeps reps only: less assistance is progress, more reps too, and the two don't add up.
-func RecordKinds(k store.Kind) []RecordKind {
+func RecordKinds(k domain.Kind) []RecordKind {
 	switch k {
-	case store.KindWeightReps:
+	case domain.KindWeightReps:
 		return []RecordKind{RecordE1RM, RecordWeight, RecordSetVolume, RecordSessionVolume, RecordReps}
-	case store.KindWeightedBodyweight:
+	case domain.KindWeightedBodyweight:
 		// No e1RM: the bodyweight isn't known until measurements (P7), so the added weight alone says little.
 		return []RecordKind{RecordWeight, RecordSetVolume, RecordSessionVolume, RecordReps}
-	case store.KindRepsOnly, store.KindAssistedBodyweight:
+	case domain.KindRepsOnly, domain.KindAssistedBodyweight:
 		return []RecordKind{RecordReps, RecordSessionReps}
-	case store.KindDuration:
+	case domain.KindDuration:
 		return []RecordKind{RecordDuration}
-	case store.KindDistanceDuration:
+	case domain.KindDistanceDuration:
 		return []RecordKind{RecordDistance, RecordDuration}
 	}
 	return nil
@@ -66,8 +66,8 @@ func E1RM(weightG, reps int) (int, bool) {
 
 // setValue is what one set counts for a per-set record kind; ok is false when
 // it doesn't count (warm-ups never do).
-func setValue(rk RecordKind, s store.LoggedSet) (int, bool) {
-	if s.Type == store.SetWarmup {
+func setValue(rk RecordKind, s domain.LoggedSet) (int, bool) {
+	if s.Type == domain.SetWarmup {
 		return 0, false
 	}
 	switch rk {
@@ -132,13 +132,13 @@ type RepRecord struct {
 // Session is an exercise in one workout: its sets, its values for each record
 // kind (the chart's points) and the records it beat.
 type Session struct {
-	WorkoutID string             `json:"workoutId"`
-	Title     string             `json:"title"`
-	StartedAt time.Time          `json:"startedAt"`
-	Sets      []store.WorkoutSet `json:"sets"`
-	Best      map[RecordKind]int `json:"best"`
-	Records   []Record           `json:"records"`
-	rows      []store.LoggedSet
+	WorkoutID string              `json:"workoutId"`
+	Title     string              `json:"title"`
+	StartedAt time.Time           `json:"startedAt"`
+	Sets      []domain.WorkoutSet `json:"sets"`
+	Best      map[RecordKind]int  `json:"best"`
+	Records   []Record            `json:"records"`
+	rows      []domain.LoggedSet
 }
 
 // history is everything known about one exercise, worked out from its sets.
@@ -153,7 +153,7 @@ type history struct {
 // every earlier workout's; the first workout with a value sets none, else every
 // first workout would be all records. Within a workout only its best set holds
 // the record, the earliest on a tie.
-func analyze(k store.Kind, rows []store.LoggedSet) history {
+func analyze(k domain.Kind, rows []domain.LoggedSet) history {
 	kinds := RecordKinds(k)
 	h := history{bests: map[RecordKind]Record{}, reps: []RepRecord{}}
 	for start := 0; start < len(rows); {
@@ -164,7 +164,7 @@ func analyze(k store.Kind, rows []store.LoggedSet) history {
 		s := Session{WorkoutID: rows[start].WorkoutID, Title: rows[start].Title, StartedAt: rows[start].StartedAt,
 			Best: map[RecordKind]int{}, Records: []Record{}, rows: rows[start:end]}
 		for _, r := range s.rows {
-			s.Sets = append(s.Sets, store.WorkoutSet{Type: r.Type, WeightG: r.WeightG, Reps: r.Reps, RPE: r.RPE, DurationS: r.DurationS, DistanceM: r.DistanceM})
+			s.Sets = append(s.Sets, domain.WorkoutSet{Type: r.Type, WeightG: r.WeightG, Reps: r.Reps, RPE: r.RPE, DurationS: r.DurationS, DistanceM: r.DistanceM})
 		}
 		for _, rk := range kinds {
 			best, ok := sessionBest(rk, s.rows)
@@ -193,7 +193,7 @@ func analyze(k store.Kind, rows []store.LoggedSet) history {
 
 // sessionBest is one workout's value for a record kind: its best set, or the
 // sum of its sets for a workout total.
-func sessionBest(rk RecordKind, rows []store.LoggedSet) (Record, bool) {
+func sessionBest(rk RecordKind, rows []domain.LoggedSet) (Record, bool) {
 	var best Record
 	found := false
 	for _, r := range rows {
@@ -216,19 +216,19 @@ func sessionBest(rk RecordKind, rows []store.LoggedSet) (Record, bool) {
 	return best, found
 }
 
-func record(rk RecordKind, v int, r store.LoggedSet) Record {
+func record(rk RecordKind, v int, r domain.LoggedSet) Record {
 	return Record{Kind: rk, Value: v, WorkoutID: r.WorkoutID, StartedAt: r.StartedAt, Exercise: r.Exercise, Set: r.Set,
 		WeightG: r.WeightG, Reps: r.Reps, DurationS: r.DurationS, DistanceM: r.DistanceM}
 }
 
 // repRecords are the heaviest weights lifted for at least 1 to 12 reps, the
 // first time each was reached; reps never reached are left out.
-func repRecords(rows []store.LoggedSet) []RepRecord {
+func repRecords(rows []domain.LoggedSet) []RepRecord {
 	out := []RepRecord{}
 	for n := 1; n <= e1rmMaxReps; n++ {
 		var best *RepRecord
 		for _, r := range rows {
-			if r.Type == store.SetWarmup || r.WeightG == nil || r.Reps == nil || *r.WeightG <= 0 || *r.Reps < n {
+			if r.Type == domain.SetWarmup || r.WeightG == nil || r.Reps == nil || *r.WeightG <= 0 || *r.Reps < n {
 				continue
 			}
 			if best == nil || *r.WeightG > best.WeightG {
@@ -243,7 +243,7 @@ func repRecords(rows []store.LoggedSet) []RepRecord {
 }
 
 // currentBests lists h's bests in the kind's order.
-func (h history) currentBests(k store.Kind) []Record {
+func (h history) currentBests(k domain.Kind) []Record {
 	out := []Record{}
 	for _, rk := range RecordKinds(k) {
 		if r, ok := h.bests[rk]; ok {
@@ -254,8 +254,8 @@ func (h history) currentBests(k store.Kind) []Record {
 }
 
 // byExercise splits sets by exercise, keeping their order.
-func byExercise(rows []store.LoggedSet) map[string][]store.LoggedSet {
-	out := map[string][]store.LoggedSet{}
+func byExercise(rows []domain.LoggedSet) map[string][]domain.LoggedSet {
+	out := map[string][]domain.LoggedSet{}
 	for _, r := range rows {
 		out[r.ExerciseID] = append(out[r.ExerciseID], r)
 	}
@@ -273,7 +273,7 @@ type ExerciseProgress struct {
 // ExerciseProgress works out me's records and history of an exercise, archived
 // ones included.
 // shortcut: replays every set of the exercise on each call (ms for years of training); keep a records table if it shows.
-func (c *Core) ExerciseProgress(ctx context.Context, me store.User, id string) (ExerciseProgress, error) {
+func (c *Core) ExerciseProgress(ctx context.Context, me domain.User, id string) (ExerciseProgress, error) {
 	e, err := c.GetExercise(ctx, me, id)
 	if err != nil {
 		return ExerciseProgress{}, err
@@ -292,9 +292,9 @@ func (c *Core) ExerciseProgress(ctx context.Context, me store.User, id string) (
 
 // Bests returns me's current best of each record kind per exercise, for the
 // phone to spot records while logging; exercises never done are left out.
-func (c *Core) Bests(ctx context.Context, me store.User, exerciseIDs []string) (map[string]map[RecordKind]int, error) {
+func (c *Core) Bests(ctx context.Context, me domain.User, exerciseIDs []string) (map[string]map[RecordKind]int, error) {
 	if len(exerciseIDs) > maxExercises {
-		return nil, fmt.Errorf("%w: at most %d exercises", ErrInvalid, maxExercises)
+		return nil, fmt.Errorf("%w: at most %d exercises", domain.ErrInvalid, maxExercises)
 	}
 	h, err := c.histories(ctx, me, exerciseIDs)
 	if err != nil {
@@ -314,7 +314,7 @@ func (c *Core) Bests(ctx context.Context, me store.User, exerciseIDs []string) (
 }
 
 // histories analyses each of the exercises me can see; unknown ones are skipped.
-func (c *Core) histories(ctx context.Context, me store.User, exerciseIDs []string) (map[string]history, error) {
+func (c *Core) histories(ctx context.Context, me domain.User, exerciseIDs []string) (map[string]history, error) {
 	rows, err := c.store.ExerciseSets(ctx, me.ID, exerciseIDs)
 	if err != nil {
 		return nil, err
@@ -332,12 +332,12 @@ func (c *Core) histories(ctx context.Context, me store.User, exerciseIDs []strin
 
 // WorkoutView is a workout with the records it beat.
 type WorkoutView struct {
-	store.Workout
+	domain.Workout
 	Records []Record `json:"records"`
 }
 
 // withRecords adds to each workout the records it beat.
-func (c *Core) withRecords(ctx context.Context, me store.User, ws []store.Workout) ([]WorkoutView, error) {
+func (c *Core) withRecords(ctx context.Context, me domain.User, ws []domain.Workout) ([]WorkoutView, error) {
 	var exIDs []string
 	for _, w := range ws {
 		for _, we := range w.Exercises {

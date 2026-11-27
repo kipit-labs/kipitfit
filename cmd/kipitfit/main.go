@@ -14,8 +14,10 @@ import (
 	"github.com/kipit-labs/kipitfit/internal/api"
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/core"
+	"github.com/kipit-labs/kipitfit/internal/domain"
+	"github.com/kipit-labs/kipitfit/internal/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
 	"github.com/kipit-labs/kipitfit/internal/media"
-	"github.com/kipit-labs/kipitfit/internal/store"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
 	"github.com/kipit-labs/kipitfit/web"
 )
@@ -35,7 +37,7 @@ func main() {
 }
 
 // openMedia connects to the media bucket, or returns nil when none is set.
-func openMedia(cfg config.Config) (media.Store, error) {
+func openMedia(cfg config.Config) (domain.MediaStore, error) {
 	if cfg.S3Endpoint == "" {
 		return nil, nil
 	}
@@ -107,8 +109,8 @@ func serve() error {
 
 // wire builds the app on an open store: core, the API and the web app behind
 // the real-IP and security-header middleware. m is nil when media is off.
-func wire(ctx context.Context, cfg config.Config, st store.Store, m media.Store, log *slog.Logger) (http.Handler, *core.Core, error) {
-	c := core.New(cfg, st, m, log)
+func wire(ctx context.Context, cfg config.Config, st *sqlite.Store, m domain.MediaStore, log *slog.Logger) (http.Handler, *core.Core, error) {
+	c := core.New(cfg, st, security.NewBcryptHasher(0), exercisedb.Dataset{}, m, log)
 	if err := c.InitAuth(ctx); err != nil {
 		return nil, nil, err
 	}

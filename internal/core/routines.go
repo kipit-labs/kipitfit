@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/kipit-labs/kipitfit/internal/store"
+	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
 const (
@@ -25,16 +25,14 @@ const (
 	maxOrder = 1000
 )
 
-var SetTypes = []store.SetType{store.SetNormal, store.SetWarmup, store.SetDrop, store.SetFailure}
-
 var (
-	ErrTitle            = coded(ErrInvalid, "title_invalid", fmt.Sprintf("the name must be 1 to %d characters", maxTitle))
-	ErrNotesTooLong     = coded(ErrInvalid, "notes_too_long", fmt.Sprintf("notes can be at most %d characters", maxNotes))
-	ErrTooManyExercises = coded(ErrInvalid, "too_many_exercises", fmt.Sprintf("at most %d exercises", maxExercises))
-	ErrTooManySets      = coded(ErrInvalid, "too_many_sets", fmt.Sprintf("at most %d sets per exercise", maxSets))
-	ErrSetType          = coded(ErrInvalid, "set_type_invalid", "a set type must be normal, warmup, drop or failure")
-	ErrSetValue         = coded(ErrInvalid, "set_value_invalid", "a set has a value out of range or that its exercise doesn't take")
-	ErrSuperset         = coded(ErrInvalid, "superset_invalid", "a superset is one letter, A to Z")
+	ErrTitle            = domain.Coded(domain.ErrInvalid, "title_invalid", fmt.Sprintf("the name must be 1 to %d characters", maxTitle))
+	ErrNotesTooLong     = domain.Coded(domain.ErrInvalid, "notes_too_long", fmt.Sprintf("notes can be at most %d characters", maxNotes))
+	ErrTooManyExercises = domain.Coded(domain.ErrInvalid, "too_many_exercises", fmt.Sprintf("at most %d exercises", maxExercises))
+	ErrTooManySets      = domain.Coded(domain.ErrInvalid, "too_many_sets", fmt.Sprintf("at most %d sets per exercise", maxSets))
+	ErrSetType          = domain.Coded(domain.ErrInvalid, "set_type_invalid", "a set type must be normal, warmup, drop or failure")
+	ErrSetValue         = domain.Coded(domain.ErrInvalid, "set_value_invalid", "a set has a value out of range or that its exercise doesn't take")
+	ErrSuperset         = domain.Coded(domain.ErrInvalid, "superset_invalid", "a superset is one letter, A to Z")
 )
 
 func init() {
@@ -46,11 +44,11 @@ func init() {
 
 // Routines are me's folders and routines, each in order.
 type Routines struct {
-	Folders  []store.Folder  `json:"folders"`
-	Routines []store.Routine `json:"routines"`
+	Folders  []domain.Folder  `json:"folders"`
+	Routines []domain.Routine `json:"routines"`
 }
 
-func (c *Core) ListRoutines(ctx context.Context, me store.User) (Routines, error) {
+func (c *Core) ListRoutines(ctx context.Context, me domain.User) (Routines, error) {
 	fs, err := c.store.ListFolders(ctx, me.ID)
 	if err != nil {
 		return Routines{}, err
@@ -60,29 +58,29 @@ func (c *Core) ListRoutines(ctx context.Context, me store.User) (Routines, error
 }
 
 // CreateRoutine saves in as a new routine of me's, after the others.
-func (c *Core) CreateRoutine(ctx context.Context, me store.User, in store.Routine) (store.Routine, error) {
+func (c *Core) CreateRoutine(ctx context.Context, me domain.User, in domain.Routine) (domain.Routine, error) {
 	if err := c.checkRoutine(ctx, me, &in); err != nil {
-		return store.Routine{}, err
+		return domain.Routine{}, err
 	}
 	return c.store.CreateRoutine(ctx, in)
 }
 
 // UpdateRoutine replaces routine id with in, exercises and sets included.
-func (c *Core) UpdateRoutine(ctx context.Context, me store.User, id string, in store.Routine) (store.Routine, error) {
+func (c *Core) UpdateRoutine(ctx context.Context, me domain.User, id string, in domain.Routine) (domain.Routine, error) {
 	if err := c.checkRoutine(ctx, me, &in); err != nil {
-		return store.Routine{}, err
+		return domain.Routine{}, err
 	}
 	in.ID = id
 	return c.store.UpdateRoutine(ctx, in)
 }
 
-func (c *Core) DeleteRoutine(ctx context.Context, me store.User, id string) error {
+func (c *Core) DeleteRoutine(ctx context.Context, me domain.User, id string) error {
 	return c.store.DeleteRoutine(ctx, me.ID, id)
 }
 
 // checkRoutine validates and normalises r as me's; its folder and exercises
 // must be ones me sees.
-func (c *Core) checkRoutine(ctx context.Context, me store.User, r *store.Routine) error {
+func (c *Core) checkRoutine(ctx context.Context, me domain.User, r *domain.Routine) error {
 	r.UserID = me.ID
 	var err error
 	if r.Name, err = title(r.Name); err != nil {
@@ -96,8 +94,8 @@ func (c *Core) checkRoutine(ctx context.Context, me store.User, r *store.Routine
 		if err != nil {
 			return err
 		}
-		if !slices.ContainsFunc(fs, func(f store.Folder) bool { return f.ID == r.FolderID }) {
-			return store.ErrNotFound
+		if !slices.ContainsFunc(fs, func(f domain.Folder) bool { return f.ID == r.FolderID }) {
+			return domain.ErrNotFound
 		}
 	}
 	if len(r.Exercises) > maxExercises {
@@ -132,8 +130,8 @@ func (c *Core) checkRoutine(ctx context.Context, me store.User, r *store.Routine
 	return nil
 }
 
-func checkTarget(k store.Kind, s store.RoutineSet) error {
-	if !slices.Contains(SetTypes, s.Type) {
+func checkTarget(k domain.Kind, s domain.RoutineSet) error {
+	if !slices.Contains(domain.SetTypes, s.Type) {
 		return ErrSetType
 	}
 	f := fieldsOf(k)
@@ -149,15 +147,15 @@ func checkTarget(k store.Kind, s store.RoutineSet) error {
 // fields are the values a set of an exercise kind takes.
 type fields struct{ weight, reps, duration, distance bool }
 
-func fieldsOf(k store.Kind) fields {
+func fieldsOf(k domain.Kind) fields {
 	switch k {
-	case store.KindWeightReps, store.KindWeightedBodyweight, store.KindAssistedBodyweight:
+	case domain.KindWeightReps, domain.KindWeightedBodyweight, domain.KindAssistedBodyweight:
 		return fields{weight: true, reps: true}
-	case store.KindRepsOnly:
+	case domain.KindRepsOnly:
 		return fields{reps: true}
-	case store.KindDuration:
+	case domain.KindDuration:
 		return fields{duration: true}
-	case store.KindDistanceDuration:
+	case domain.KindDistanceDuration:
 		return fields{duration: true, distance: true}
 	}
 	return fields{}
@@ -182,29 +180,29 @@ type FolderInput struct {
 	Name string `json:"name"`
 }
 
-func (c *Core) ListFolders(ctx context.Context, me store.User) ([]store.Folder, error) {
+func (c *Core) ListFolders(ctx context.Context, me domain.User) ([]domain.Folder, error) {
 	return c.store.ListFolders(ctx, me.ID)
 }
 
-func (c *Core) CreateFolder(ctx context.Context, me store.User, in FolderInput) (store.Folder, error) {
+func (c *Core) CreateFolder(ctx context.Context, me domain.User, in FolderInput) (domain.Folder, error) {
 	name, err := title(in.Name)
 	if err != nil {
-		return store.Folder{}, err
+		return domain.Folder{}, err
 	}
-	return c.store.CreateFolder(ctx, store.Folder{UserID: me.ID, Name: name})
+	return c.store.CreateFolder(ctx, domain.Folder{UserID: me.ID, Name: name})
 }
 
-func (c *Core) RenameFolder(ctx context.Context, me store.User, id string, in FolderInput) (store.Folder, error) {
+func (c *Core) RenameFolder(ctx context.Context, me domain.User, id string, in FolderInput) (domain.Folder, error) {
 	name, err := title(in.Name)
 	if err != nil {
-		return store.Folder{}, err
+		return domain.Folder{}, err
 	}
-	f := store.Folder{ID: id, UserID: me.ID, Name: name}
+	f := domain.Folder{ID: id, UserID: me.ID, Name: name}
 	return f, c.store.RenameFolder(ctx, f)
 }
 
 // DeleteFolder deletes the folder; its routines stay, in no folder.
-func (c *Core) DeleteFolder(ctx context.Context, me store.User, id string) error {
+func (c *Core) DeleteFolder(ctx context.Context, me domain.User, id string) error {
 	return c.store.DeleteFolder(ctx, me.ID, id)
 }
 
@@ -215,9 +213,9 @@ type Order struct {
 	Routines []string `json:"routines"`
 }
 
-func (c *Core) Reorder(ctx context.Context, me store.User, in Order) error {
+func (c *Core) Reorder(ctx context.Context, me domain.User, in Order) error {
 	if len(in.Folders) > maxOrder || len(in.Routines) > maxOrder {
-		return fmt.Errorf("%w: at most %d ids", ErrInvalid, maxOrder)
+		return fmt.Errorf("%w: at most %d ids", domain.ErrInvalid, maxOrder)
 	}
 	return c.store.Reorder(ctx, me.ID, in.Folders, in.Routines)
 }

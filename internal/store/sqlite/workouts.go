@@ -7,28 +7,30 @@ import (
 
 	"github.com/uptrace/bun"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
-func (s *Store) PutWorkout(ctx context.Context, w store.Workout) (store.Workout, error) {
+func (s *Store) PutWorkout(ctx context.Context, w domain.Workout) (domain.Workout, error) {
 	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		var owner string
 		err := tx.NewSelect().Table("workouts").Column("user_id").Where("id = ?", w.ID).Scan(ctx, &owner)
 		switch {
 		case err == nil && owner != w.UserID:
-			return store.ErrNotFound
+			return domain.ErrNotFound
 		case err == nil:
 			// A retry or an edit: replace it, keeping when it was first saved.
 			w.UpdatedAt = now()
-			_, err = tx.NewUpdate().Model(&w).ExcludeColumn("id", "user_id", "created_at").WherePK().Exec(ctx)
+			row := newWorkoutRow(w)
+			_, err = tx.NewUpdate().Model(&row).ExcludeColumn("id", "user_id", "created_at").WherePK().Exec(ctx)
 			if err == nil {
-				_, err = tx.NewDelete().Model((*store.WorkoutExercise)(nil)).Where("workout_id = ?", w.ID).Exec(ctx)
+				_, err = tx.NewDelete().Model((*workoutExerciseRow)(nil)).Where("workout_id = ?", w.ID).Exec(ctx)
 			}
-		case errors.Is(mapErr(err), store.ErrNotFound):
+		case errors.Is(mapErr(err), domain.ErrNotFound):
 			w.CreatedAt = now()
 			w.UpdatedAt = w.CreatedAt
-			_, err = tx.NewInsert().Model(&w).Exec(ctx)
+			row := newWorkoutRow(w)
+			_, err = tx.NewInsert().Model(&row).Exec(ctx)
 		}
 		if err != nil {
 			return mapErr(err)
@@ -43,20 +45,21 @@ func (s *Store) PutWorkout(ctx context.Context, w store.Workout) (store.Workout,
 }
 
 // insertWorkoutExercises writes w's exercises and sets at their positions in w.
-func insertWorkoutExercises(ctx context.Context, tx bun.Tx, w store.Workout) error {
+func insertWorkoutExercises(ctx context.Context, tx bun.Tx, w domain.Workout) error {
 	if len(w.Exercises) == 0 {
 		return nil
 	}
-	sets := []store.WorkoutSet{}
-	for i := range w.Exercises {
-		we := &w.Exercises[i]
-		we.ID, we.WorkoutID, we.Position = ids.New(), w.ID, i
+	exs := make([]workoutExerciseRow, len(w.Exercises))
+	sets := []workoutSetRow{}
+	for i, we := range w.Exercises {
+		exs[i] = workoutExerciseRow{ID: ids.New(), WorkoutID: w.ID, ExerciseID: we.ExerciseID, Position: i,
+			Superset: we.Superset, Notes: we.Notes}
 		for j, set := range we.Sets {
-			set.WorkoutExerciseID, set.Position = we.ID, j
-			sets = append(sets, set)
+			sets = append(sets, workoutSetRow{WorkoutExerciseID: exs[i].ID, Position: j, Type: set.Type, WeightG: set.WeightG,
+				Reps: set.Reps, RPE: set.RPE, DurationS: set.DurationS, DistanceM: set.DistanceM})
 		}
 	}
-	if _, err := tx.NewInsert().Model(&w.Exercises).Exec(ctx); err != nil {
+	if _, err := tx.NewInsert().Model(&exs).Exec(ctx); err != nil {
 		return mapErr(err)
 	}
 	if len(sets) > 0 {
@@ -67,45 +70,46 @@ func insertWorkoutExercises(ctx context.Context, tx bun.Tx, w store.Workout) err
 	return nil
 }
 
-func (s *Store) ListWorkouts(ctx context.Context, userID, after string, limit int) ([]store.Workout, error) {
-	ws := []store.Workout{}
-	q := withExercises(s.db.NewSelect().Model(&ws)).Where("w.user_id = ?", userID).OrderExpr("w.started_at DESC, w.id DESC").Limit(limit)
+func (s *Store) ListWorkouts(ctx context.Context, userID, after string, limit int) ([]domain.Workout, error) {
+	var rows []workoutRow
+	q := withExercises(s.db.NewSelect().Model(&rows)).Where("w.user_id = ?", userID).OrderExpr("w.started_at DESC, w.id DESC").Limit(limit)
 	if after != "" {
 		q = q.Where("(w.started_at, w.id) < (SELECT a.started_at, a.id FROM workouts AS a WHERE a.id = ? AND a.user_id = ?)", after, userID)
 	}
 	if err := q.Scan(ctx); err != nil {
 		return nil, mapErr(err)
 	}
-	for i := range ws {
-		fill(&ws[i])
-	}
-	return ws, nil
+	return workouts(rows), nil
 }
 
-func (s *Store) WorkoutsSince(ctx context.Context, userID string, from time.Time) ([]store.Workout, error) {
-	ws := []store.Workout{}
-	err := withExercises(s.db.NewSelect().Model(&ws)).Where("w.user_id = ? AND w.started_at >= ?", userID, from.UTC()).
+func (s *Store) WorkoutsSince(ctx context.Context, userID string, from time.Time) ([]domain.Workout, error) {
+	var rows []workoutRow
+	err := withExercises(s.db.NewSelect().Model(&rows)).Where("w.user_id = ? AND w.started_at >= ?", userID, from.UTC()).
 		OrderExpr("w.started_at, w.id").Scan(ctx)
 	if err != nil {
 		return nil, mapErr(err)
 	}
-	for i := range ws {
-		fill(&ws[i])
-	}
-	return ws, nil
+	return workouts(rows), nil
 }
 
-func (s *Store) GetWorkout(ctx context.Context, userID, id string) (store.Workout, error) {
+func workouts(rows []workoutRow) []domain.Workout {
+	ws := make([]domain.Workout, len(rows))
+	for i, r := range rows {
+		ws[i] = r.domain()
+	}
+	return ws
+}
+
+func (s *Store) GetWorkout(ctx context.Context, userID, id string) (domain.Workout, error) {
 	return getWorkout(ctx, s.db, userID, id)
 }
 
-func getWorkout(ctx context.Context, db bun.IDB, userID, id string) (store.Workout, error) {
-	var w store.Workout
+func getWorkout(ctx context.Context, db bun.IDB, userID, id string) (domain.Workout, error) {
+	var w workoutRow
 	if err := withExercises(db.NewSelect().Model(&w)).Where("w.id = ? AND w.user_id = ?", id, userID).Scan(ctx); err != nil {
-		return store.Workout{}, mapErr(err)
+		return domain.Workout{}, mapErr(err)
 	}
-	fill(&w)
-	return w, nil
+	return w.domain(), nil
 }
 
 // withExercises loads a workout query's exercises (archived ones too) and sets, in order.
@@ -117,53 +121,42 @@ func withExercises(q *bun.SelectQuery) *bun.SelectQuery {
 		Relation("Exercises.Sets", func(q *bun.SelectQuery) *bun.SelectQuery { return q.Order("s.position") })
 }
 
-// fill sets what a loaded workout's JSON needs: exercise flags and empty lists rather than null.
-func fill(w *store.Workout) {
-	for i := range w.Exercises {
-		if e := w.Exercises[i].Exercise; e != nil {
-			flags(e)
-		}
-		if w.Exercises[i].Sets == nil {
-			w.Exercises[i].Sets = []store.WorkoutSet{}
-		}
-	}
-	if w.Exercises == nil {
-		w.Exercises = []store.WorkoutExercise{}
-	}
-}
-
 func (s *Store) DeleteWorkout(ctx context.Context, userID, id string) error {
-	res, err := s.db.NewDelete().Model((*store.Workout)(nil)).Where("id = ? AND user_id = ?", id, userID).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*workoutRow)(nil)).Where("id = ? AND user_id = ?", id, userID).Exec(ctx)
 	return affected(res, err)
 }
 
-func (s *Store) PreviousSets(ctx context.Context, userID string, exerciseIDs []string) (map[string][]store.WorkoutSet, error) {
-	out := map[string][]store.WorkoutSet{}
+func (s *Store) PreviousSets(ctx context.Context, userID string, exerciseIDs []string) (map[string][]domain.WorkoutSet, error) {
+	out := map[string][]domain.WorkoutSet{}
 	for _, ex := range exerciseIDs {
 		var weID string
 		err := s.db.NewSelect().TableExpr("workout_exercises AS we").TableExpr("workouts AS w").ColumnExpr("we.id").
 			Where("we.workout_id = w.id AND w.user_id = ? AND we.exercise_id = ?", userID, ex).
 			OrderExpr("w.started_at DESC, we.position").Limit(1).Scan(ctx, &weID)
-		if errors.Is(mapErr(err), store.ErrNotFound) {
+		if errors.Is(mapErr(err), domain.ErrNotFound) {
 			continue
 		}
 		if err != nil {
 			return nil, err
 		}
-		sets := []store.WorkoutSet{}
-		if err := s.db.NewSelect().Model(&sets).Where("workout_exercise_id = ?", weID).Order("position").Scan(ctx); err != nil {
+		var rows []workoutSetRow
+		if err := s.db.NewSelect().Model(&rows).Where("workout_exercise_id = ?", weID).Order("position").Scan(ctx); err != nil {
 			return nil, err
+		}
+		sets := make([]domain.WorkoutSet, len(rows))
+		for i, r := range rows {
+			sets[i] = r.domain()
 		}
 		out[ex] = sets
 	}
 	return out, nil
 }
 
-func (s *Store) ExerciseSets(ctx context.Context, userID string, exerciseIDs []string) ([]store.LoggedSet, error) {
-	out := []store.LoggedSet{}
+func (s *Store) ExerciseSets(ctx context.Context, userID string, exerciseIDs []string) ([]domain.LoggedSet, error) {
 	if len(exerciseIDs) == 0 {
-		return out, nil
+		return []domain.LoggedSet{}, nil
 	}
+	var rows []loggedSetRow
 	err := s.db.NewSelect().TableExpr("sets AS s").
 		Join("JOIN workout_exercises AS we ON we.id = s.workout_exercise_id").
 		Join("JOIN workouts AS w ON w.id = we.workout_id").
@@ -171,6 +164,10 @@ func (s *Store) ExerciseSets(ctx context.Context, userID string, exerciseIDs []s
 		ColumnExpr(`s.position AS "set", s.type, s.weight_g, s.reps, s.rpe, s.duration_s, s.distance_m`).
 		Where("w.user_id = ? AND we.exercise_id IN (?)", userID, bun.List(exerciseIDs)).
 		OrderExpr("w.started_at, w.id, we.position, s.position").
-		Scan(ctx, &out)
+		Scan(ctx, &rows)
+	out := make([]domain.LoggedSet, len(rows))
+	for i, r := range rows {
+		out[i] = domain.LoggedSet(r)
+	}
 	return out, mapErr(err)
 }

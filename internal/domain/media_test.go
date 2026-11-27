@@ -1,8 +1,8 @@
-package media
+package domain
 
 import "testing"
 
-func TestValidKey(t *testing.T) {
+func TestValidMediaKey(t *testing.T) {
 	for key, want := range map[string]bool{
 		"packs/repdb-free/20261114T121104Z/squat-start.webp": true,
 		"packs/a/b.webp":    true,
@@ -17,8 +17,8 @@ func TestValidKey(t *testing.T) {
 		"/packs/a.webp":     false,
 		"packs/é.webp":      false,
 	} {
-		if got := ValidKey(key); got != want {
-			t.Errorf("ValidKey(%q) = %v, want %v", key, got, want)
+		if got := ValidMediaKey(key); got != want {
+			t.Errorf("ValidMediaKey(%q) = %v, want %v", key, got, want)
 		}
 	}
 }

@@ -6,29 +6,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
-	"github.com/kipit-labs/kipitfit/internal/store"
 )
 
 func TestWorkouts(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
-	a, _ := s.CreateUser(ctx, store.User{Email: "a@b.c", PasswordHash: "h"})
-	b, _ := s.CreateUser(ctx, store.User{Email: "b@b.c", PasswordHash: "h"})
-	if _, err := s.SyncLibrary(ctx, "v1", []store.Exercise{libraryRow("bench", "Bench Press"), libraryRow("row", "Row")}); err != nil {
+	a, _ := s.CreateUser(ctx, domain.User{Email: "a@b.c", PasswordHash: "h"})
+	b, _ := s.CreateUser(ctx, domain.User{Email: "b@b.c", PasswordHash: "h"})
+	if _, err := s.SyncLibrary(ctx, "v1", []domain.Exercise{libraryRow("bench", "Bench Press"), libraryRow("row", "Row")}); err != nil {
 		t.Fatal(err)
 	}
 	lib, _ := s.ListExercises(ctx, a.ID)
 	bench, row := lib[0].ID, lib[1].ID
-	r, _ := s.CreateRoutine(ctx, store.Routine{UserID: a.ID, Name: "Push"})
+	r, _ := s.CreateRoutine(ctx, domain.Routine{UserID: a.ID, Name: "Push"})
 
 	start := time.Date(2026, 11, 20, 18, 0, 0, 0, time.UTC)
-	workout := func(id string, at time.Time, weight int) store.Workout {
-		rpe := store.Tenths(85)
-		return store.Workout{ID: id, UserID: a.ID, RoutineID: r.ID, Title: "Push", StartedAt: at, EndedAt: at.Add(time.Hour), VolumeG: 1,
-			Exercises: []store.WorkoutExercise{{ExerciseID: bench, Sets: []store.WorkoutSet{
-				{Type: store.SetWarmup, WeightG: ptr(20000), Reps: ptr(10)},
-				{Type: store.SetNormal, WeightG: ptr(weight), Reps: ptr(5), RPE: &rpe},
+	workout := func(id string, at time.Time, weight int) domain.Workout {
+		rpe := domain.Tenths(85)
+		return domain.Workout{ID: id, UserID: a.ID, RoutineID: r.ID, Title: "Push", StartedAt: at, EndedAt: at.Add(time.Hour), VolumeG: 1,
+			Exercises: []domain.WorkoutExercise{{ExerciseID: bench, Sets: []domain.WorkoutSet{
+				{Type: domain.SetWarmup, WeightG: ptr(20000), Reps: ptr(10)},
+				{Type: domain.SetNormal, WeightG: ptr(weight), Reps: ptr(5), RPE: &rpe},
 			}}}}
 	}
 	first, second := ids.New(), ids.New()
@@ -47,10 +47,10 @@ func TestWorkouts(t *testing.T) {
 		t.Fatalf("after a retry: %d workouts", len(ws))
 	}
 	// Someone else's id is not found, and stays theirs.
-	if _, err := s.PutWorkout(ctx, store.Workout{ID: first, UserID: b.ID, Title: "x", StartedAt: start, EndedAt: start}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := s.PutWorkout(ctx, domain.Workout{ID: first, UserID: b.ID, Title: "x", StartedAt: start, EndedAt: start}); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("b puts a's workout: %v", err)
 	}
-	if _, err := s.GetWorkout(ctx, b.ID, first); !errors.Is(err, store.ErrNotFound) {
+	if _, err := s.GetWorkout(ctx, b.ID, first); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("b gets a's workout: %v", err)
 	}
 
@@ -75,7 +75,7 @@ func TestWorkouts(t *testing.T) {
 	}
 	rows, err := s.ExerciseSets(ctx, a.ID, []string{bench, row})
 	if err != nil || len(rows) != 4 || rows[0].WorkoutID != first || rows[3].WorkoutID != second ||
-		rows[1].Set != 1 || *rows[1].WeightG != 82500 || !rows[0].StartedAt.Equal(start) || rows[0].Title != "Push" || rows[0].Type != store.SetWarmup {
+		rows[1].Set != 1 || *rows[1].WeightG != 82500 || !rows[0].StartedAt.Equal(start) || rows[0].Title != "Push" || rows[0].Type != domain.SetWarmup {
 		t.Fatalf("exercise sets = %+v, %v", rows, err)
 	}
 	if rows, _ := s.ExerciseSets(ctx, b.ID, []string{bench}); len(rows) != 0 {
@@ -96,10 +96,10 @@ func TestWorkouts(t *testing.T) {
 	}
 
 	// An exercise a workout uses is archived on delete.
-	mine, _ := s.CreateExercise(ctx, store.Exercise{OwnerID: a.ID, Name: "Mine", Kind: store.KindRepsOnly, Category: "strength",
+	mine, _ := s.CreateExercise(ctx, domain.Exercise{OwnerID: a.ID, Name: "Mine", Kind: domain.KindRepsOnly, Category: "strength",
 		Equipment: "none", PrimaryMuscles: []string{"chest"}})
 	w = workout(ids.New(), start.Add(-time.Hour), 1)
-	w.Exercises = append(w.Exercises, store.WorkoutExercise{ExerciseID: mine.ID, Sets: []store.WorkoutSet{{Type: store.SetNormal, Reps: ptr(3)}}})
+	w.Exercises = append(w.Exercises, domain.WorkoutExercise{ExerciseID: mine.ID, Sets: []domain.WorkoutSet{{Type: domain.SetNormal, Reps: ptr(3)}}})
 	if _, err := s.PutWorkout(ctx, w); err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestWorkouts(t *testing.T) {
 		t.Errorf("exercise used by a workout after delete = %+v, %v", e, err)
 	}
 
-	if err := s.DeleteWorkout(ctx, b.ID, first); !errors.Is(err, store.ErrNotFound) {
+	if err := s.DeleteWorkout(ctx, b.ID, first); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("b deletes a's workout: %v", err)
 	}
 	if err := s.DeleteWorkout(ctx, a.ID, first); err != nil {
