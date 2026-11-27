@@ -1,4 +1,5 @@
-import type { ExerciseKind, SetType } from "./api";
+import type { ExerciseKind, SetType, Unit } from "./api";
+import { formatDuration, formatKm, formatWeight } from "./units";
 
 export const setTypes: SetType[] = ["normal", "warmup", "drop", "failure"];
 
@@ -21,3 +22,17 @@ export function fieldsOf(kind: ExerciseKind) {
 /** The weight column's sign: added weight, or assistance taken off. */
 export const weightSign = (kind: ExerciseKind) =>
   kind === "weighted_bodyweight" ? "+" : kind === "assisted_bodyweight" ? "−" : "";
+
+/** A logged set in a line: "100 × 5" ("100 kg × 5" withUnit), "+20 × 8", "5 km · 25:00", "1:30". */
+export function setText(
+  p: { weightG?: number | null; reps?: number | null; durationS?: number | null; distanceM?: number | null },
+  kind: ExerciseKind,
+  unit: Unit,
+  withUnit = false,
+): string {
+  const f = fieldsOf(kind);
+  if (f.distance) return [p.distanceM != null && `${formatKm(p.distanceM)} km`, p.durationS != null && formatDuration(p.durationS)].filter(Boolean).join(" · ");
+  if (f.duration) return p.durationS == null ? "—" : formatDuration(p.durationS);
+  const w = f.weight && p.weightG != null ? weightSign(kind) + formatWeight(p.weightG, unit) + (withUnit ? ` ${unit}` : "") : "";
+  return `${w}${w ? " " : ""}× ${p.reps ?? "—"}`;
+}

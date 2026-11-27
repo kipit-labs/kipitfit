@@ -126,6 +126,52 @@ export type Routine = {
 
 export type RoutineInput = Omit<Routine, "id" | "lastDoneAt">;
 
+export type RecordKind =
+  | "e1rm"
+  | "weight"
+  | "set_volume"
+  | "session_volume"
+  | "reps"
+  | "session_reps"
+  | "duration"
+  | "distance";
+
+/** A best that a workout beat: value is in grams, reps, seconds or metres, by kind. */
+export type PersonalRecord = {
+  exerciseId?: string;
+  kind: RecordKind;
+  value: number;
+  /** The best it beat; missing for a current best. */
+  previous?: number;
+  workoutId: string;
+  startedAt: string;
+  /** Index of the exercise in the workout and of the set in it; set is -1 for a workout total. */
+  exercise: number;
+  set: number;
+  weightG?: number;
+  reps?: number;
+  durationS?: number;
+  distanceM?: number;
+};
+
+/** One workout's sets of an exercise, with its best of each record kind and the records it beat. */
+export type ExerciseSession = {
+  workoutId: string;
+  title: string;
+  startedAt: string;
+  sets: LoggedSet[];
+  best: Partial<Record<RecordKind, number>>;
+  records: PersonalRecord[];
+};
+
+export type ExerciseProgress = {
+  records: PersonalRecord[];
+  /** Heaviest weight lifted for at least reps reps, 1 to 12. */
+  repRecords: { reps: number; weightG: number; workoutId: string; startedAt: string }[];
+  /** Newest first. */
+  sessions: ExerciseSession[];
+};
+
 export const api = {
   authState: () => request<AuthState>("/auth/state"),
   setup: (b: { setupToken: string; email: string; name: string; password: string }) => send<User>("POST", "/auth/setup", b),
@@ -151,6 +197,7 @@ export const api = {
   renameFolder: (id: string, name: string) => send<Folder>("PATCH", `/folders/${id}`, { name }),
   deleteFolder: (id: string) => send<void>("DELETE", `/folders/${id}`),
   putWorkout: (id: string, b: WorkoutBody) => send<unknown>("PUT", `/workouts/${id}`, b),
+  exerciseProgress: (id: string) => request<ExerciseProgress>(`/exercises/${id}/progress`),
   previous: (exerciseIds: string[]) =>
     request<Record<string, LoggedSet[]>>(`/previous?exercise=${exerciseIds.map(encodeURIComponent).join(",")}`),
 };

@@ -30,7 +30,15 @@
   --set-failure: oklch(0.76 0.16 0);
 }
 
+/* Personal records: the kipit-labs yellow as a fill with dark text in both themes (11:1). */
+:root {
+  --record: #f5c518;
+  --record-foreground: #16161a;
+}
+
 @theme inline {
+  --color-record: var(--record);
+  --color-record-foreground: var(--record-foreground);
   --color-set-warmup: var(--set-warmup);
   --color-set-drop: var(--set-drop);
   --color-set-failure: var(--set-failure);

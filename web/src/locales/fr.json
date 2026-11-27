@@ -154,7 +154,12 @@
     },
     "archived": "Supprimé",
     "play": "Lecture",
-    "pause": "Pause"
+    "pause": "Pause",
+    "tabs": {
+      "summary": "Résumé",
+      "records": "Records",
+      "history": "Historique"
+    }
   },
   "routines": {
     "title": "Routines",
@@ -318,5 +323,36 @@
     "workout_empty": "Enregistrez d'abord au moins une série.",
     "set_value_missing": "Il manque à une série une valeur que son exercice demande.",
     "rpe_invalid": "Le RPE va de 6 à 10 par pas de 0,5."
+  },
+  "records": {
+    "pr": "Record",
+    "kinds": {
+      "e1rm": "1RM estimé",
+      "weight": "Charge max",
+      "set_volume": "Meilleur volume par série",
+      "session_volume": "Meilleur volume par séance",
+      "reps": "Reps max",
+      "session_reps": "Reps max en une séance",
+      "duration": "Plus long",
+      "distance": "Plus loin"
+    },
+    "short": {
+      "e1rm": "1RM est.",
+      "weight": "Charge",
+      "set_volume": "Volume série",
+      "session_volume": "Volume",
+      "reps": "Reps",
+      "session_reps": "Reps totales",
+      "duration": "Durée",
+      "distance": "Distance"
+    },
+    "chartTitle": "Progression",
+    "repRecords": "Records par reps",
+    "repRecordsDescription": "Charge max soulevée pour au moins ce nombre de reps.",
+    "reps": "Reps",
+    "weight": "Charge ({{unit}})",
+    "date": "Date",
+    "noHistory": "Pas encore fait",
+    "noHistoryDescription": "Records et historique apparaissent après une séance avec cet exercice."
   }
 }
