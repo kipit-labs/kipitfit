@@ -278,7 +278,9 @@
     "saving": "Saving…",
     "willRetry": "Not saved yet: will retry when the connection is back.",
     "discardFinish": "Discard this workout",
-    "discardFinishDescription": "It was never saved: its sets will be lost."
+    "discardFinishDescription": "It was never saved: its sets will be lost.",
+    "newRecords_one": "New record",
+    "newRecords_other": "{{count}} new records"
   },
   "errors": {
     "generic": "Something went wrong",

@@ -1,4 +1,4 @@
-import type { ExerciseKind, RecordKind, Unit } from "./api";
+import type { ExerciseKind, RecordKind, SetType, Unit } from "./api";
 import { formatDuration, formatKm, formatNumber, formatWeight, weightIn } from "./units";
 
 /** The records an exercise kind keeps, in the order the page shows them; internal/core/records.go has the same. */
@@ -37,4 +37,76 @@ export function chartValue(rk: RecordKind, value: number, unit: Unit): number {
   if (weighs(rk)) return weightIn(value, unit);
   if (rk === "distance") return value / 1000;
   return value;
+}
+
+/** A set as records see it: a logged one, or a live one, which counts once ticked done. */
+type SetValues = {
+  type: SetType;
+  done?: boolean;
+  weightG?: number | null;
+  reps?: number | null;
+  durationS?: number | null;
+  distanceM?: number | null;
+};
+
+const e1rmMaxReps = 12;
+
+/** Epley's estimated one-rep max in grams, rounded half up; undefined outside 1 to 12 reps. */
+export function e1rm(weightG: number, reps: number): number | undefined {
+  if (reps < 1 || reps > e1rmMaxReps || weightG <= 0) return undefined;
+  return Math.floor((weightG * (30 + reps) + 15) / 30);
+}
+
+const pos = (v: number | null | undefined): v is number => v != null && v > 0;
+
+/** What one set counts for a record kind; undefined when it doesn't (warm-ups never do). */
+function setValue(rk: RecordKind, s: SetValues): number | undefined {
+  if (s.type === "warmup" || s.done === false) return undefined;
+  switch (rk) {
+    case "e1rm":
+      return s.weightG != null && s.reps != null ? e1rm(s.weightG, s.reps) : undefined;
+    case "weight":
+      return pos(s.weightG) ? s.weightG : undefined;
+    case "set_volume":
+    case "session_volume":
+      return pos(s.weightG) && pos(s.reps) ? s.weightG * s.reps : undefined;
+    case "reps":
+    case "session_reps":
+      return pos(s.reps) ? s.reps : undefined;
+    case "duration":
+      return pos(s.durationS) ? s.durationS : undefined;
+    case "distance":
+      return pos(s.distanceM) ? s.distanceM : undefined;
+  }
+}
+
+const summed = (rk: RecordKind) => rk === "session_volume" || rk === "session_reps";
+
+export type Beaten = { kind: RecordKind; value: number; previous: number; /** -1 for a workout total. */ set: number };
+
+/**
+ * The records one workout's sets of an exercise beat, given the bests before it, as internal/core/records.go
+ * works them out: its best set (the first on a tie) or its total, strictly above the best. An exercise without
+ * bests was never done, and a first workout sets none.
+ */
+export function beaten(kind: ExerciseKind, sets: SetValues[], bests: Partial<Record<RecordKind, number>> | undefined): Beaten[] {
+  const out: Beaten[] = [];
+  for (const rk of recordKinds(kind)) {
+    const prev = bests?.[rk];
+    const b = sessionBest(rk, sets);
+    if (b && prev !== undefined && b.value > prev) out.push({ kind: rk, value: b.value, previous: prev, set: b.set });
+  }
+  return out;
+}
+
+/** A workout's value for a record kind and the set holding it; undefined when no set counts. */
+export function sessionBest(rk: RecordKind, sets: SetValues[]): { value: number; set: number } | undefined {
+  let best: { value: number; set: number } | undefined;
+  sets.forEach((s, j) => {
+    const v = setValue(rk, s);
+    if (v === undefined) return;
+    if (summed(rk)) best = { value: (best?.value ?? 0) + v, set: -1 };
+    else if (!best || v > best.value) best = { value: v, set: j };
+  });
+  return best;
 }

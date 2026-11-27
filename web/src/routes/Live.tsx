@@ -32,7 +32,7 @@ import { useMe } from "@/lib/auth";
 import { defaultRestS } from "@/lib/routines";
 import { fieldsOf, setLabels, setText, weightSign } from "@/lib/sets";
 import { formatDuration, formatKm, formatWeight, parseDuration, parseKm, parseWeight } from "@/lib/units";
-import { doneSets, hint, volumeOf, type Live as LiveState, type LiveExercise, type LiveSet } from "@/live/model";
+import { doneSets, hint, recordsOf, volumeOf, type Live as LiveState, type LiveExercise, type LiveSet } from "@/live/model";
 import { unlockAudio } from "@/live/signal";
 import { dispatch, loadPrevious, setLive, useLive } from "@/live/store";
 import { useNow } from "@/live/useNow";
@@ -41,6 +41,7 @@ import { CellInput } from "./CellInput";
 import { ExerciseThumb } from "./ExerciseMedia";
 import { ExercisePicker } from "./ExercisePicker";
 import { FinishSheet } from "./FinishSheet";
+import { RecordBadge } from "./RecordBadge";
 import { SetTypeMenu } from "./SetType";
 
 const rpeChoices = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
@@ -180,6 +181,17 @@ function ExerciseCard({
   const cols = cn("grid items-center gap-1.5", values === 2 ? "grid-cols-[2.25rem_1fr_4rem_4rem_2.25rem]" : "grid-cols-[2.25rem_1fr_5rem_2.25rem]");
   const last = i === live.exercises.length - 1;
   const restS = e.restS ?? defaultRestS;
+  const records = recordsOf(live, i);
+  const badges = (set: number) =>
+    records.some((r) => r.set === set) && (
+      <div className="mt-1 flex flex-wrap justify-end gap-1" aria-live="polite">
+        {records
+          .filter((r) => r.set === set)
+          .map((r) => (
+            <RecordBadge key={r.kind} kind={r.kind} value={r.value} unit={unit} />
+          ))}
+      </div>
+    );
   return (
     <li
       className={cn(
@@ -344,9 +356,11 @@ function ExerciseCard({
                   </Select>
                 </div>
               )}
+              {badges(j)}
             </div>
           );
         })}
+        {badges(-1)}
       </div>
       <Button variant="secondary" size="sm" className="mt-2 w-full" disabled={e.sets.length >= 50} onClick={() => dispatch({ type: "addSet", i })}>
         <Plus data-icon="inline-start" />
