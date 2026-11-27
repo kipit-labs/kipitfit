@@ -144,7 +144,8 @@ Passwords: 10 characters minimum, 72 bytes maximum (bcrypt).
 
 `make test`, `make lint`, `make build` (binary in `bin/`), `make docker`. `make cover` runs every Go test with the race
 detector and fails under `COVERAGE_FLOOR`; CI runs it. The end-to-end journeys in `cmd/kipitfit/*_test.go` drive the
-real wiring over HTTP on a fresh SQLite database (media in memory), and `routes_test.go` lists who may call each route. Rules for contributors (and Claude) are in
+real wiring over HTTP on a fresh SQLite database (media in memory), and `routes_test.go` lists who may call each route. `make e2e` builds the app and runs the UI tests (`web/e2e`) with
+Playwright in its Docker image: WebKit at iPhone size and desktop Chromium, on the real binary and a fresh database. Rules for contributors (and Claude) are in
 [CLAUDE.md](CLAUDE.md).
 
 ## License
