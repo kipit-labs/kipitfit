@@ -45,6 +45,14 @@ type Store interface {
 	// unless version is the one last synced; it never deletes a library row.
 	// It reports whether it wrote anything.
 	SyncLibrary(ctx context.Context, version string, exs []Exercise) (bool, error)
+	// LibraryPack returns the pack the library was imported from, ErrNotFound
+	// while it is the built-in one.
+	LibraryPack(ctx context.Context) (Pack, error)
+	// ReplaceLibrary makes exs the library, in one transaction: it upserts
+	// them by slug, re-points routines and workouts from each old slug in
+	// repoint to its new one, archives the other library exercises, and
+	// records p.
+	ReplaceLibrary(ctx context.Context, p Pack, exs []Exercise, repoint map[string]string) (Replaced, error)
 	// ListExercises returns the library and ownerID's custom exercises by
 	// name, without instructions, force, level and mechanic, and without
 	// archived ones.
@@ -156,26 +164,41 @@ const (
 type Exercise struct {
 	bun.BaseModel `bun:"table:exercises,alias:ex" json:"-"`
 
-	ID               string    `bun:"id,pk" json:"id"`
-	OwnerID          string    `bun:"owner_id,nullzero" json:"-"`
-	Slug             string    `bun:"slug,nullzero" json:"-"`
-	Name             string    `bun:"name" json:"name"`
-	Kind             Kind      `bun:"kind" json:"kind"`
-	Category         string    `bun:"category" json:"category"`
-	Equipment        string    `bun:"equipment" json:"equipment"`
-	PrimaryMuscles   []string  `bun:"primary_muscles,type:json" json:"primaryMuscles"`
-	SecondaryMuscles []string  `bun:"secondary_muscles,type:json" json:"secondaryMuscles"`
-	Force            string    `bun:"force" json:"force,omitempty"`
-	Level            string    `bun:"level" json:"level,omitempty"`
-	Mechanic         string    `bun:"mechanic" json:"mechanic,omitempty"`
-	Instructions     []string  `bun:"instructions,type:json" json:"instructions,omitempty"`
-	CreatedAt        time.Time `bun:"created_at" json:"-"`
-	UpdatedAt        time.Time `bun:"updated_at" json:"-"`
-	ArchivedAt       time.Time `bun:"archived_at,nullzero" json:"-"`
+	ID               string   `bun:"id,pk" json:"id"`
+	OwnerID          string   `bun:"owner_id,nullzero" json:"-"`
+	Slug             string   `bun:"slug,nullzero" json:"-"`
+	Name             string   `bun:"name" json:"name"`
+	Kind             Kind     `bun:"kind" json:"kind"`
+	Category         string   `bun:"category" json:"category"`
+	Equipment        string   `bun:"equipment" json:"equipment"`
+	PrimaryMuscles   []string `bun:"primary_muscles,type:json" json:"primaryMuscles"`
+	SecondaryMuscles []string `bun:"secondary_muscles,type:json" json:"secondaryMuscles"`
+	Force            string   `bun:"force" json:"force,omitempty"`
+	Level            string   `bun:"level" json:"level,omitempty"`
+	Mechanic         string   `bun:"mechanic" json:"mechanic,omitempty"`
+	Instructions     []string `bun:"instructions,type:json" json:"instructions,omitempty"`
+	// Media are the bucket keys of a pack exercise's pictures, in frame order.
+	Media      []string  `bun:"media,type:json" json:"media"`
+	CreatedAt  time.Time `bun:"created_at" json:"-"`
+	UpdatedAt  time.Time `bun:"updated_at" json:"-"`
+	ArchivedAt time.Time `bun:"archived_at,nullzero" json:"-"`
 	// Custom and Archived are set by the store: the exercise belongs to a
 	// user; it was deleted while in use.
 	Custom   bool `bun:"-" json:"custom"`
 	Archived bool `bun:"-" json:"archived"`
+}
+
+// Pack is where the library came from, and the credit its licence asks for.
+type Pack struct {
+	Name      string `json:"name"`
+	Version   string `json:"version"`
+	Credit    string `json:"credit"`
+	CreditURL string `json:"creditUrl"`
+}
+
+// Replaced counts what ReplaceLibrary did.
+type Replaced struct {
+	Exercises, Repointed, Archived int
 }
 
 type Folder struct {

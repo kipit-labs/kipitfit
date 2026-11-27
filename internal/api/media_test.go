@@ -16,6 +16,9 @@ func TestMedia(t *testing.T) {
 	_ = m.Put(ctx, "packs/p/1/evil.html", strings.NewReader("<script>"), 8, "text/html")
 	_ = m.Put(ctx, "users/u/private.jpg", strings.NewReader("jpg"), 3, "image/jpeg")
 
+	if w := do(a, "GET", "/api/library", "", me, ""); w.Code != http.StatusOK || w.Body.String() != "{\"pack\":null,\"media\":true}\n" {
+		t.Fatalf("library: %d %s", w.Code, w.Body)
+	}
 	if w := do(a, "GET", "/api/media/packs/p/1/squat-start.webp", "", "", ""); w.Code != http.StatusUnauthorized {
 		t.Fatalf("signed out: %d", w.Code)
 	}
