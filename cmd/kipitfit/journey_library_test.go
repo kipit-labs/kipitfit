@@ -10,7 +10,7 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
-	"github.com/kipit-labs/kipitfit/internal/media"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/media"
 )
 
 type library struct {

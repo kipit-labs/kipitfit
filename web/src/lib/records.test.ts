@@ -27,7 +27,7 @@ describe("chart", () => {
   });
 });
 
-// The cases internal/core/records_test.go runs too, so the phone badges what the server records. Read at run time:
+// The cases internal/usecase/records/records_test.go runs too, so the phone badges what the server records. Read at run time:
 // the Docker web build type-checks src without the Go tree.
 type Case = {
   name: string;

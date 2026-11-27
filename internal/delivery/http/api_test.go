@@ -1,4 +1,4 @@
-package api
+package http
 
 import (
 	"context"
@@ -15,10 +15,10 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/domain"
-	"github.com/kipit-labs/kipitfit/internal/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/media"
 	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
-	"github.com/kipit-labs/kipitfit/internal/media"
-	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/sqlite"
 	"github.com/kipit-labs/kipitfit/internal/usecase/auth"
 	"github.com/kipit-labs/kipitfit/internal/usecase/exercises"
 	"github.com/kipit-labs/kipitfit/internal/usecase/library"
@@ -165,7 +165,7 @@ func TestLoginLimiter(t *testing.T) {
 // has a message in each web catalog.
 func TestErrorCodesTranslated(t *testing.T) {
 	for _, lang := range []string{"en", "fr"} {
-		raw, err := os.ReadFile(filepath.Join("..", "..", "web", "src", "locales", lang+".json"))
+		raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "src", "locales", lang+".json"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -189,7 +189,7 @@ func TestExerciseLabelsTranslated(t *testing.T) {
 		enums["kinds"] = append(enums["kinds"], string(k))
 	}
 	for _, lang := range []string{"en", "fr"} {
-		raw, err := os.ReadFile(filepath.Join("..", "..", "web", "src", "locales", lang+".json"))
+		raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "src", "locales", lang+".json"))
 		if err != nil {
 			t.Fatal(err)
 		}

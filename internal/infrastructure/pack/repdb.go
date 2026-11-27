@@ -7,7 +7,7 @@ import (
 	"slices"
 
 	"github.com/kipit-labs/kipitfit/internal/domain"
-	"github.com/kipit-labs/kipitfit/internal/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/exercisedb"
 )
 
 // RepDB's muscles, equipment, categories and levels onto kipitfit's keys.

@@ -1,5 +1,5 @@
-// Package api exposes the use cases over JSON/HTTP.
-package api
+// Package http exposes the use cases over JSON/HTTP.
+package http
 
 import (
 	"context"

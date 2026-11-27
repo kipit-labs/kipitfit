@@ -1,6 +1,7 @@
-// Package sqlitedb opens kipitfit's SQLite file: WAL, one connection, goose
-// migrations with a snapshot before each upgrade.
-package sqlitedb
+package sqlite
+
+// The SQLite file: WAL, one connection, goose migrations with a snapshot
+// before each upgrade.
 
 import (
 	"context"
@@ -18,9 +19,9 @@ import (
 	_ "modernc.org/sqlite" // the "sqlite" database/sql driver
 )
 
-// Open opens (or creates) the database at path and applies the pending
+// openDB opens (or creates) the database at path and applies the pending
 // migrations of fsys, a folder of goose SQL files.
-func Open(ctx context.Context, path string, fsys fs.FS) (*sql.DB, error) {
+func openDB(ctx context.Context, path string, fsys fs.FS) (*sql.DB, error) {
 	dsn := "file:" + path +
 		"?_pragma=journal_mode(WAL)" +
 		"&_pragma=busy_timeout(5000)" +

@@ -16,7 +16,7 @@ import type { TFunction } from "i18next";
 
 import { api, type ExerciseKind, type ExerciseSummary } from "./api";
 
-// Same values as internal/core/exercises.go; labels are exercises.<group>.<value>.
+// Same values as internal/domain/exercise.go; labels are exercises.<group>.<value>.
 export const kinds: ExerciseKind[] = [
   "weight_reps",
   "reps_only",
