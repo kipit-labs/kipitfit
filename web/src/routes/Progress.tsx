@@ -16,7 +16,7 @@ import { api, type Unit, type WorkoutStats } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import { errorMessage } from "@/lib/errors";
 import { byDay, dayKey, dayOf, muscleSets, statsFrom, weekOf, weeks, type Week } from "@/lib/stats";
-import { formatWeight } from "@/lib/units";
+import { formatNumber, formatWeight, weightIn } from "@/lib/units";
 import { currentLanguage } from "@/i18n";
 
 import { PageTitle } from "./Layout";
@@ -98,7 +98,7 @@ function WeeksChart({ stats, now, unit }: { stats: WorkoutStats[]; now: Date; un
     week: w,
     label: short(w.start),
     // Hours and kg/lb, so the axis reads in round numbers.
-    value: metric === "durationS" ? w.durationS / 3600 : metric === "volumeG" ? Number(formatWeight(w.volumeG, unit)) : w.workouts,
+    value: metric === "durationS" ? w.durationS / 3600 : metric === "volumeG" ? weightIn(w.volumeG, unit) : w.workouts,
   }));
   return (
     <Section title={t("progress.weeks")}>
@@ -122,7 +122,13 @@ function WeeksChart({ stats, now, unit }: { stats: WorkoutStats[]; now: Date; un
         <BarChart data={data} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={16} />
-          <YAxis width={40} tickLine={false} axisLine={false} allowDecimals={metric !== "workouts"} />
+          <YAxis
+            width={44}
+            tickLine={false}
+            axisLine={false}
+            allowDecimals={metric !== "workouts"}
+            tickFormatter={(v: number) => formatNumber(v, { maximumFractionDigits: 1 })}
+          />
           <ChartTooltip
             cursor={false}
             content={
