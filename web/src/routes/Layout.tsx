@@ -13,8 +13,9 @@ const tabs = [
 /** The signed-in app: one screen at a time over a bottom tab bar. */
 export function Layout() {
   const { t } = useTranslation();
-  // The exercise library is reached from the Workout tab.
-  const inLibrary = useLocation().pathname.startsWith("/exercises");
+  // The exercise library and the routine editor are reached from the Workout tab.
+  const path = useLocation().pathname;
+  const inLibrary = path.startsWith("/exercises") || path.startsWith("/routines");
   return (
     <div className="flex min-h-svh flex-col">
       <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-24">
