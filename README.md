@@ -68,8 +68,8 @@ Errors answer `{"error": "...", "code": "...", "params": {...}}`; the app shows 
 | GET | `/api/exercises/{id}` | session | One exercise with its instructions. Another user's exercise is a 404. |
 | POST | `/api/exercises` | session | `{name, kind, category?, equipment?, primaryMuscles, secondaryMuscles?}`: creates your own exercise. |
 | PATCH | `/api/exercises/{id}` | session | Same fields, all optional. Library exercises answer 403 `library_exercise_readonly`. |
-| DELETE | `/api/exercises/{id}` | session | Deletes your own exercise; one a routine uses is archived instead: hidden from the list, still in routines, its GET says `archived: true`. |
-| GET | `/api/routines` | session | `{folders, routines}` in order; each routine has its `exercises` (with the `exercise` itself, archived too) and target `sets`. |
+| DELETE | `/api/exercises/{id}` | session | Deletes your own exercise; one a routine or workout uses is archived instead: hidden from the list, still in routines, its GET says `archived: true`. |
+| GET | `/api/routines` | session | `{folders, routines}` in order; each routine has its `exercises` (with the `exercise` itself, archived too), target `sets` and `lastDoneAt`. |
 | POST | `/api/routines` | session | `{name, notes?, folderId?, exercises: [{exerciseId, superset?, restS?, notes?, sets: [{type, weightG?, repsMin?, repsMax?, durationS?, distanceM?}]}]}`: added after your others. At most 50 exercises and 50 sets each. |
 | PUT | `/api/routines/{id}` | session | Same body: replaces the whole routine. Another user's routine is a 404. |
 | DELETE | `/api/routines/{id}` | session | Deletes a routine. |
@@ -78,6 +78,11 @@ Errors answer `{"error": "...", "code": "...", "params": {...}}`; the app shows 
 | POST | `/api/folders` | session | `{name}`: added after your others. |
 | PATCH | `/api/folders/{id}` | session | `{name}`: renames. |
 | DELETE | `/api/folders/{id}` | session | Deletes a folder; its routines stay, in no folder. |
+| PUT | `/api/workouts/{id}` | session | `{title, notes?, routineId?, startedAt, endedAt, exercises: [{exerciseId, superset?, notes?, sets: [{type, weightG?, reps?, rpe?, durationS?, distanceM?}]}]}` under the ULID the phone made at start: creates the workout, or replaces it, so a retried finish saves once. Values follow the exercise kind; `rpe` 6–10 by 0.5. Returns it with `volumeG` (weight × reps of the non-warm-up sets). Another user's id is a 404. |
+| GET | `/api/workouts?after=` | session | `{workouts, next?}`: 20 workouts without their exercises, newest first; pass `next` as `after` for the next page. |
+| GET | `/api/workouts/{id}` | session | One workout with its exercises and sets. |
+| DELETE | `/api/workouts/{id}` | session | Deletes a workout. |
+| GET | `/api/previous?exercise=a,b,c` | session | `{exerciseId: sets}`: each exercise's sets in your latest workout that has it (at most 50 exercises). |
 
 Passwords: 10 characters minimum, 72 bytes maximum (bcrypt).
 

@@ -151,9 +151,9 @@ seconds. No floats in the database, so 92.5 kg is always 92 500 and conversion t
 | `routines` | user_id, folder_id, name, notes, position | |
 | `routine_exercises` | routine_id, exercise_id, position, superset, rest_s, notes | `superset` = group letter, NULL when alone |
 | `routine_sets` | routine_exercise_id, position, type, weight_g, reps_min, reps_max, duration_s, distance_m | targets, all nullable |
-| `workouts` | id (made on the phone), user_id, routine_id, title, notes, started_at, ended_at, visibility, volume_g, records | client ULID makes finish idempotent when the network drops |
+| `workouts` | id (made on the phone), user_id, routine_id, title, notes, started_at, ended_at, visibility, volume_g, records | client ULID makes finish idempotent when the network drops; visibility (P6) and records (P5) come later |
 | `workout_exercises` | workout_id, exercise_id, position, superset, notes | |
-| `sets` | workout_exercise_id, position, type, weight_g, reps, rpe, duration_s, distance_m, e1rm_g | index on (user, exercise, workout start) via join for "previous" |
+| `sets` | workout_exercise_id, position, type, weight_g, reps, rpe, duration_s, distance_m, e1rm_g | rpe stored ×10 (8.5 → 85); e1rm_g comes with records (P5); "previous" joins workouts by exercise and start |
 | `records` | user_id, exercise_id, kind, value, set_id, achieved_at | current best per kind; rebuilt for one exercise on edit/delete |
 | `measurements` | user_id, kind, value, unit, measured_at | one row per value; kinds: weight, body_fat, waist, chest, arm_l, arm_r… |
 | `friendships` | user_a, user_b, requested_by, accepted_at | one row per pair, like kipitrek |
@@ -171,10 +171,8 @@ simplest for a reorderable editor; `PUT /api/routines/order` reorders folders an
 | GET | `/api/exercises` | library + your custom ones, compact; the app searches and filters (876 rows, ~190 kB) |
 | POST PATCH DELETE | `/api/exercises/{id}` | custom exercises only |
 | GET | `/api/exercises/{id}/history` · `/records` · `/series?metric=` | per-exercise sets, records, chart points |
-| GET | `/api/previous?exercise=a,b,c` | last logged sets per exercise, fetched when a workout starts |
-| PUT | `/api/workouts/{id}` | save a finished workout by its phone-made id; returns new records. Same call edits it later |
-| GET | `/api/workouts?after=` · `/api/workouts/{id}` | your history, paged; one workout |
-| DELETE | `/api/workouts/{id}` | records of its exercises rebuilt |
+| PUT | `/api/workouts/{id}` | built (README) without records: P5 adds the new records to its answer |
+| DELETE | `/api/workouts/{id}` | built; P5 rebuilds the records of its exercises |
 | GET | `/api/stats?from=&to=` | per-week counts, volume, sets per muscle, training days |
 | GET POST DELETE | `/api/measurements` | body measurements |
 | GET | `/api/feed?after=` | friends' visible workouts, 20 a page |
