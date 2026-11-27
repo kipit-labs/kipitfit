@@ -16,10 +16,10 @@ import { setLabels, setText } from "@/lib/sets";
 import { formatDuration, formatWeight } from "@/lib/units";
 import { currentLanguage } from "@/i18n";
 
-import { ExerciseThumb } from "./ExerciseMedia";
-import { PageTitle } from "./Layout";
-import { RecordBadge, RecordMark } from "./RecordBadge";
-import { useStartWorkout } from "./StartWorkout";
+import { ExerciseThumb } from "@/features/exercises/ExerciseMedia";
+import { PageTitle } from "@/features/layout/Layout";
+import { RecordBadge, RecordMark } from "@/features/progress/RecordBadge";
+import { useStartWorkout } from "@/features/workout/StartWorkout";
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString(currentLanguage(), { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });

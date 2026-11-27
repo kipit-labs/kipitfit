@@ -21,7 +21,7 @@ import { ExerciseForm } from "./ExerciseForm";
 import { ExerciseFrames } from "./ExerciseMedia";
 import { History, ProgressChart, Records } from "./ExerciseProgress";
 import { chip } from "./Exercises";
-import { PageTitle } from "./Layout";
+import { PageTitle } from "@/features/layout/Layout";
 
 export function ExerciseDetail() {
   const { t } = useTranslation();

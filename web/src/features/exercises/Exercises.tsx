@@ -16,7 +16,7 @@ import { categories, equipment, exercisesQuery, filterExercises, muscles, type F
 
 import { ExerciseForm } from "./ExerciseForm";
 import { ExerciseThumb } from "./ExerciseMedia";
-import { PageTitle } from "./Layout";
+import { PageTitle } from "@/features/layout/Layout";
 
 // Rows rendered at a time; more come as the end of the list scrolls into view.
 const page = 40;

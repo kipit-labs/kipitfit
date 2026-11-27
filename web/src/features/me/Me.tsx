@@ -15,7 +15,7 @@ import { api, type User } from "@/lib/api";
 import { authQuery, useMe } from "@/lib/auth";
 import { errorMessage } from "@/lib/errors";
 
-import { PageTitle } from "./Layout";
+import { PageTitle } from "@/features/layout/Layout";
 
 export function Me() {
   const { t } = useTranslation();

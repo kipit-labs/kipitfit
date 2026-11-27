@@ -19,7 +19,7 @@ import { byDay, dayKey, dayOf, muscleSets, statsFrom, weekOf, weeks, type Week }
 import { formatNumber, formatWeight, weightIn } from "@/lib/units";
 import { currentLanguage } from "@/i18n";
 
-import { PageTitle } from "./Layout";
+import { PageTitle } from "@/features/layout/Layout";
 
 type Metric = "workouts" | "durationS" | "volumeG";
 

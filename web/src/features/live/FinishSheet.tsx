@@ -9,10 +9,10 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 
 import type { Unit } from "@/lib/api";
 import { formatDuration, formatWeight } from "@/lib/units";
-import { doneSets, elapsedS, recordsOf, toWorkout, updatedRoutine, volumeOf, type Live, type RoutineUpdate } from "@/live/model";
-import { finish } from "@/live/store";
+import { doneSets, elapsedS, recordsOf, toWorkout, updatedRoutine, volumeOf, type Live, type RoutineUpdate } from "@/features/live/model";
+import { finish } from "@/features/live/store";
 
-import { RecordBadge } from "./RecordBadge";
+import { RecordBadge } from "@/features/progress/RecordBadge";
 
 /** Ends the live workout: summary, title, notes, what to do with the routine, then save. */
 export function FinishSheet({

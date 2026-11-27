@@ -14,7 +14,7 @@ import { setLabels, setText } from "@/lib/sets";
 import { formatDuration, formatNumber, formatWeight } from "@/lib/units";
 import { currentLanguage } from "@/i18n";
 
-import { RecordBadge, RecordMark } from "./RecordBadge";
+import { RecordBadge, RecordMark } from "@/features/progress/RecordBadge";
 
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString(currentLanguage(), { day: "numeric", month: "short" });
 const longDate = (iso: string) => new Date(iso).toLocaleDateString(currentLanguage(), { dateStyle: "medium" });

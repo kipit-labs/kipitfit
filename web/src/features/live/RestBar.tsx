@@ -3,10 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@kipit-labs/kipitidy/button";
 
 import { formatDuration } from "@/lib/units";
-import type { Live } from "@/live/model";
-import { restOver } from "@/live/signal";
-import { dispatch } from "@/live/store";
-import { useNow } from "@/live/useNow";
+import type { Live } from "@/features/live/model";
+import { restOver } from "@/features/live/signal";
+import { dispatch } from "@/features/live/store";
+import { useNow } from "@/features/live/useNow";
 
 /** The rest timer over the tab bar: what's left, −15 s, +15 s, skip; beeps at the end. */
 export function RestBar({ rest }: { rest: NonNullable<Live["rest"]> }) {

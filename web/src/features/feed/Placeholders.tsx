@@ -2,7 +2,7 @@ import { Rss } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@kipit-labs/kipitidy/empty-state";
 
-import { PageTitle } from "./Layout";
+import { PageTitle } from "@/features/layout/Layout";
 
 // Screens still to build (see docs/design.md).
 

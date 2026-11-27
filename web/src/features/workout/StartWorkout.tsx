@@ -14,9 +14,9 @@ import {
 
 import type { LoggedWorkout, Routine } from "@/lib/api";
 import { useMe } from "@/lib/auth";
-import { editing, start } from "@/live/model";
-import { getLive, loadPrevious, setLive } from "@/live/store";
-import { ulid } from "@/live/ulid";
+import { editing, start } from "@/features/live/model";
+import { getLive, loadPrevious, setLive } from "@/features/live/store";
+import { ulid } from "@/features/live/ulid";
 
 /**
  * Starts a live workout, empty, from a routine, or a saved one to edit. One runs per device: with one
