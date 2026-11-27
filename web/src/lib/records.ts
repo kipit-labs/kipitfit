@@ -1,5 +1,5 @@
 import type { ExerciseKind, RecordKind, Unit } from "./api";
-import { formatDuration, formatKm, formatWeight } from "./units";
+import { formatDuration, formatKm, formatNumber, formatWeight, weightIn } from "./units";
 
 /** The records an exercise kind keeps, in the order the page shows them; internal/core/records.go has the same. */
 export function recordKinds(k: ExerciseKind): RecordKind[] {
@@ -23,8 +23,9 @@ export const chartKinds = (k: ExerciseKind): RecordKind[] => recordKinds(k).filt
 
 const weighs = (rk: RecordKind) => rk === "e1rm" || rk === "weight" || rk === "set_volume" || rk === "session_volume";
 
-/** A record's value with its unit: "111 kg", "12", "1:30", "5.2 km". */
+/** A record's value with its unit: "111.0 kg" (an estimate, to 0.1 kg), "100 kg", "12", "1:30", "5.2 km". */
 export function formatRecord(rk: RecordKind, value: number, unit: Unit): string {
+  if (rk === "e1rm" && unit === "kg") return `${formatNumber(Math.round(value / 100) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg`;
   if (weighs(rk)) return `${formatWeight(value, unit)} ${unit}`;
   if (rk === "duration") return formatDuration(value);
   if (rk === "distance") return `${formatKm(value)} km`;
@@ -33,7 +34,7 @@ export function formatRecord(rk: RecordKind, value: number, unit: Unit): string 
 
 /** A record's value as a number to chart: weights in unit, distance in km, the rest as is. */
 export function chartValue(rk: RecordKind, value: number, unit: Unit): number {
-  if (weighs(rk)) return Number(formatWeight(value, unit));
+  if (weighs(rk)) return weightIn(value, unit);
   if (rk === "distance") return value / 1000;
   return value;
 }

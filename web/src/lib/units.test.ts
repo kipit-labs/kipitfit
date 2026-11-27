@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import i18n from "i18next";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { formatDuration, formatKm, formatReps, formatWeight, parseDuration, parseKm, parseReps, parseWeight } from "./units";
+import { formatDuration, formatKm, formatNumber, formatReps, formatWeight, parseDuration, parseKm, parseReps, parseWeight } from "./units";
+
+// Formatting follows i18next's language, English until switched.
+beforeAll(() => i18n.init({ lng: "en", resources: {} }));
+afterEach(() => i18n.changeLanguage("en"));
 
 describe("weights", () => {
   it("stores grams from kg and lb", () => {
@@ -18,10 +23,22 @@ describe("weights", () => {
     expect(formatWeight(20000, "lb")).toBe("44");
     expect(formatWeight(21000, "lb")).toBe("46.5");
   });
+  it("writes numbers the UI language's way; fields skip grouping so they parse back", async () => {
+    expect(formatWeight(6505500, "kg")).toBe("6,505.5");
+    expect(formatWeight(1000000, "lb", true)).toBe("2204.5");
+    await i18n.changeLanguage("fr");
+    // Intl groups French thousands with a narrow no-break space.
+    expect(formatWeight(6505500, "kg")).toBe("6\u202f505,5");
+    expect(formatWeight(92500, "kg", true)).toBe("92,5");
+    expect(parseWeight(formatWeight(92500, "kg", true), "kg")).toBe(92500);
+    expect(formatKm(5200, true)).toBe("5,2");
+    expect(formatNumber(0.25)).toBe("0,25");
+  });
   it("round-trips lb without drift", () => {
     for (const lb of ["45", "135", "225", "2.5", "47.5"]) expect(formatWeight(parseWeight(lb, "lb")!, "lb")).toBe(lb);
   });
 });
+
 
 describe("reps", () => {
   it("parses one count or a range", () => {

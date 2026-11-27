@@ -10,7 +10,7 @@ import { Segmented, SegmentedItem } from "@kipit-labs/kipitidy/segmented";
 import type { ExerciseKind, ExerciseProgress, ExerciseSession, PersonalRecord, RecordKind, Unit } from "@/lib/api";
 import { chartKinds, chartValue, formatRecord } from "@/lib/records";
 import { setLabels, setText } from "@/lib/sets";
-import { formatDuration, formatWeight } from "@/lib/units";
+import { formatDuration, formatNumber, formatWeight } from "@/lib/units";
 import { currentLanguage } from "@/i18n";
 
 import { RecordBadge, RecordMark } from "./RecordBadge";
@@ -59,7 +59,7 @@ export function ProgressChart({ kind, sessions, unit }: { kind: ExerciseKind; se
             tickLine={false}
             axisLine={false}
             domain={["auto", "auto"]}
-            tickFormatter={(v: number) => (rk === "duration" ? formatDuration(v) : String(Math.round(v * 10) / 10))}
+            tickFormatter={(v: number) => (rk === "duration" ? formatDuration(v) : formatNumber(v, { maximumFractionDigits: 1 }))}
           />
           <ChartTooltip
             content={
