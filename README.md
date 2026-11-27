@@ -95,6 +95,30 @@ skips the pictures already uploaded. Routines and workouts keep their history: e
 same name and kind, the old library is archived. Respect the pack's licence: RepDB's free tier asks for the credit
 "Exercise data by RepDB (repdb.co)", which kipitfit shows on **Me → About**.
 
+## Architecture
+
+Clean architecture: dependencies point inward, `domain` has no framework imports. depguard in `.golangci.yml`
+enforces the layers.
+
+```
+cmd/kipitfit/              composition root: wire(), the HTTP server, `kipitfit pack import`
+internal/
+  domain/                  entities, repository and service ports, coded errors, shared rules
+  usecase/                 the logic, one Service per area: auth, exercises, library, routines, workouts, records
+  infrastructure/
+    sqlite/                bun models, repositories, goose migrations (WAL, one connection, snapshot before upgrades)
+    media/                 S3-compatible bucket for pack pictures (minio-go), and an in-memory one for tests
+    exercisedb/            the built-in exercise library (free-exercise-db, embedded)
+    pack/                  readers for vendor exercise packs (RepDB)
+    security/              bcrypt password hashing
+  delivery/http/           handlers, sessions, the login limiter, security headers
+  config/                  KIPITFIT_* settings
+web/                       React app (src/features/<area>, src/lib); web/embed.go embeds web/dist
+```
+
+Adding a feature usually means: an entity or port in `domain`, a service in `usecase`, an adapter in
+`infrastructure`, and a handler in `delivery/http`, wired in `cmd/kipitfit/main.go`.
+
 ## API
 
 JSON over HTTP with a session cookie (`kipitfit_session`, 30 days). Mutations from another origin are refused.

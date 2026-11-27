@@ -126,29 +126,32 @@ training (kipitiny ships one to copy), coach/client accounts, a Postgres store b
 
 ## Architecture
 
-Same layers and rules as kipitiny. The fitness domain lives in `internal/core`; handlers and the importer only call
-core; core only talks to `store.Store`.
+Same layers and rules as kipitrek (see `CLAUDE.md`): dependencies point inward, enforced by depguard. Entities and ports
+are in `internal/domain`, the logic in `internal/usecase/<area>`, adapters in `internal/infrastructure`, handlers in
+`internal/delivery/http`; `cmd/kipitfit` wires them.
 
 ```
-cmd/kipitfit/        main.go: config, open db, wire, serve
+cmd/kipitfit/        main.go: config, open db, wire, serve; pack.go: `kipitfit pack import`
 internal/
   config/            env → Config (KIPITFIT_*)
   ids/               ULIDs
-  sqlitedb/          WAL, 1 conn, goose, pre-migrate snapshot
-  store/             Store interface + entity structs
-    sqlite/          bun implementation
+  domain/            entities, repository and service ports, coded errors, shared rules
+  usecase/           auth, exercises, library, routines, workouts, records (social, measurements later)
+  infrastructure/
+    sqlite/          bun models and repositories; WAL, 1 conn, goose, pre-migrate snapshot
       migrations/    00001_init.sql …
-  core/              all logic: auth, workouts, routines, records, stats, social, measurements
-  exercisedb/        embedded seed JSON + loader
-  media/             S3 bucket for pack pictures
-  pack/              exercise pack readers (repdb-free)
-  importer/          Hevy / Strong CSV parsers              (later)
-  api/               net/http ServeMux, JSON, auth middleware
-  mail/              verification + invite emails            (later)
-  notify/            Web Push: rest timer, kudos, comments  (later)
+    exercisedb/      embedded seed JSON + loader
+    media/           S3 bucket for pack pictures
+    pack/            exercise pack readers (repdb-free)
+    security/        bcrypt password hashing
+    importer/        Hevy / Strong CSV parsers              (later)
+    mail/            verification + invite emails            (later)
+    notify/          Web Push: rest timer, kudos, comments  (later)
+  delivery/http/     net/http ServeMux, JSON, auth middleware
 web/                 React app, go:embed web/dist
-  src/routes/        Feed, Workout, Live, Exercise, Progress, Me
-  src/live/          live-workout store (persisted on device)
+  src/features/      one folder per area: workout, live (the live-workout store, persisted on device), routines,
+                     exercises, history, progress, me, feed, auth, layout
+  src/lib/           what several features share: API client, units, records
 ```
 
 ### Stack
@@ -218,7 +221,7 @@ simplest for a reorderable editor; `PUT /api/routines/order` reorders folders an
 ## Rules of the domain
 
 ### Live workout on the phone
-Gyms have bad signal. The live workout is a client store (`web/src/live`, a pure reducer) saved as JSON to
+Gyms have bad signal. The live workout is a client store (`web/src/features/live`, a pure reducer) saved as JSON to
 localStorage after every change, never a server row: a few kB, so IndexedDB isn't worth its API. Starting copies the
 routine into it and fetches "previous" once. Finishing queues one `PUT /api/workouts/{ulid}` (plus the routine's
 update, if picked) in a localStorage outbox, sent at once and retried with backoff (2 s doubling to a minute) until a
@@ -256,7 +259,7 @@ Records are **worked out from the sets when read**, not stored: core replays an 
 nothing to rebuild, and workouts saved before P5 have their records with no backfill. Replaying a few thousand sets
 takes milliseconds; a records table is the upgrade if it ever shows. `PUT /api/workouts/{id}` answers with the records
 the workout beat; the phone runs the same rules live from the bests it fetched at start, and a Go test and a TS test
-share one fixture file (`internal/core/testdata/records.json`) so both agree.
+share one fixture file (`internal/usecase/records/testdata/records.json`) so both agree.
 
 ### Volume and units
 Volume = Σ weight × reps over non-warm-up sets. Weighted bodyweight adds the latest bodyweight measurement; assisted
