@@ -22,6 +22,10 @@ Design doc: `docs/design.md` — read before architectural changes. Roadmap in "
 - Mobile-first PWA (phone at the gym, 390×844 first), no native wrapper. Theme via kipitidy's `theme.css`; the only
   override is the teal `--primary` (kipitfit's kipit-labs colour) in `web/src/index.css`.
 - Sign-up is invite-only: an admin creates an invite, the link is the credential.
+- Never commit third-party exercise pictures or pack data (RepDB, ExerciseDB…): their licences forbid republishing.
+  Packs are imported per deployment (`kipitfit pack import`); tests build tiny synthetic packs.
+- Pictures live in an S3-compatible bucket and are served only through `/api/media` (`packs/` keys, images/videos);
+  the CSP stays `'self'`. Media off (no `KIPITFIT_S3_ENDPOINT`) must keep working with equipment icons.
 
 ## Commands
 `make dev-api` / `make dev-web` / `make test` / `make lint` / `make build` / `make docker`.

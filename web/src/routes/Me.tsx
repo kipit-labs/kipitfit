@@ -28,6 +28,7 @@ export function Me() {
       <div className="space-y-4">
         <Profile me={me} />
         {me.isAdmin && <Invites />}
+        <About />
         <Button variant="outline" className="w-full" loading={logout.isPending} onClick={() => logout.mutate()}>
           <LogOut data-icon="inline-start" />
           {t("me.signOut")}
@@ -165,6 +166,21 @@ function Invites() {
           </div>
         )
       )}
+    </Section>
+  );
+}
+
+/** The credit the exercise pack's licence asks for; nothing for the built-in library. */
+function About() {
+  const { t } = useTranslation();
+  const lib = useQuery({ queryKey: ["library"], queryFn: api.library, staleTime: Infinity });
+  const pack = lib.data?.pack;
+  if (!pack?.credit) return null;
+  return (
+    <Section title={t("me.about")}>
+      <a href={pack.creditUrl} target="_blank" rel="noopener" className="text-sm underline underline-offset-4">
+        {pack.credit}
+      </a>
     </Section>
   );
 }

@@ -55,6 +55,7 @@
     "expires": "Expires {{date}}",
     "revoke": "Revoke invite",
     "revokeFailed": "Couldn't revoke the invite",
+    "about": "About",
     "signOut": "Sign out"
   },
   "exercises": {
@@ -149,7 +150,9 @@
       "intermediate": "Intermediate",
       "expert": "Expert"
     },
-    "archived": "Deleted"
+    "archived": "Deleted",
+    "play": "Play",
+    "pause": "Pause"
   },
   "routines": {
     "title": "Routines",

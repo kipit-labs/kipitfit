@@ -8,7 +8,7 @@ embedded.
 |---|---|
 | Backend | kipitiny pattern: Go, SQLite, bun, goose |
 | Social | friends + feed, kudos, comments |
-| Exercises | open dataset seed + custom |
+| Exercises | open dataset seed, or an imported pack with pictures; + custom |
 | v1 extras | Hevy/Strong import, body measurements, supersets + set types, plate calc + 1RM |
 | Languages | English + French from day one |
 | UI | `@kipit-labs/kipitidy` |
@@ -64,9 +64,8 @@ failure, **PR** personal record. Bottom tabs: Feed, Workout, Progress, Me.
   kinds and levels are translated.
 - Search (words in any order, case and accents ignored) and filters by muscle, equipment and category, run in the app
   over the whole list; custom exercises per user (name unique per user, case-insensitive). Library rows are read-only.
-- Next: a `name_fr` column with reviewed French names, and a `kipitfit fetch-images` command that downloads the
-  dataset's photos into the data dir once, by hand: the app itself never calls out. Until then a row shows its
-  equipment icon.
+- Next: a `name_fr` column with reviewed French names.
+- Pictures come from an exercise pack (see "Exercise media"); without one, a row shows its equipment icon.
 - Per exercise: history, records, rep records 1–12, chart.
 
 ### Progress
@@ -94,6 +93,37 @@ Programs (multi-week plans with progression rules), auto-progression suggestions
 leaderboards, Apple Health / Google Fit sync (needs a native wrapper), watch app, an MCP server so Claude can read your
 training (kipitiny ships one to copy), coach/client accounts, a Postgres store behind the same interface.
 
+### Exercise media
+- No pictures ship with kipitfit: the ones worth having (faceless illustrations or animations, the target muscle
+  highlighted) are licensed, and their licences forbid republishing them. free-exercise-db's photos show real faces
+  and trace back to Bodybuilding.com, so they aren't used. Each deployment imports its own **pack**: a vendor's ZIP with
+  an exercise list and its pictures.
+- `kipitfit pack import <pack> [ZIP or URL] [--sha256 HEX]`, a subcommand of the same binary (so it runs in the
+  distroless image, e.g. `kubectl exec deploy/kipitfit -- /kipitfit pack import repdb-free`). It uploads the pictures
+  to an S3-compatible bucket (RustFS, MinIO, R2…), skipping keys already there, so a re-run resumes; then, in one
+  transaction, it makes the pack's exercises the library. Adapters: `repdb-free` (RepDB's free tier, downloaded from
+  repdb.co, 708 exercises, flat start/peak stills, credit "Exercise data by RepDB (repdb.co)" shown on Me → About).
+  Paid RepDB and ExerciseDB adapters come from their preview bundles; slugs are `<vendor>:<id>`, so moving from the
+  free to the paid RepDB keeps every exercise's id.
+- **The pack replaces the library.** A pack's names, muscles and instructions describe its own pictures; matching
+  them to free-exercise-db by hand would be guesswork. free-exercise-db stays the built-in library of deployments
+  without a pack; once a pack is imported, the boot sync no longer brings it back. Routines and workouts on a built-in
+  exercise move to the pack exercise with the same name (case, spaces and punctuation ignored) **and the same kind**,
+  so targets and logged sets still fit. Every old library exercise is archived, never deleted: hidden from the list,
+  still shown where it's used, and still valid for a workout that was under way on a phone during the import. Custom
+  exercises are untouched.
+- The pack's muscles, equipment and categories map onto kipitfit's keys (RepDB's 30 muscles onto 18, adding
+  `hip_flexors`; its ~70 pieces of equipment onto 11: bars and rings you hang from count as body weight, every
+  `*_machine` as a machine). The kind is guessed with the same rules as the built-in library.
+- Keys are `packs/<pack>/<version>/<file>`: a new pack version gets new keys, so a key's content never changes.
+  `GET /api/media/{key}` streams from the private bucket behind the session (licensed, in-app use), with the object's
+  ETag and `Cache-Control: private, max-age=31536000, immutable`; only `packs/` keys, images and videos are served (any
+  other type goes out as `application/octet-stream`), so the CSP stays `'self'`. Without `KIPITFIT_S3_ENDPOINT`,
+  media is off and everything shows equipment icons; a picture that fails to load falls back the same way.
+- UI: a 40 px thumbnail (the first frame) in the library, the picker and on live-workout cards (tapping it opens the
+  exercise); on the exercise page the frames loop every 900 ms with a pause button, one still frame under
+  `prefers-reduced-motion`.
+
 ## Architecture
 
 Same layers and rules as kipitiny. The fitness domain lives in `internal/core`; handlers and the importer only call
@@ -109,7 +139,9 @@ internal/
     sqlite/          bun implementation
       migrations/    00001_init.sql …
   core/              all logic: auth, workouts, routines, records, stats, social, measurements
-  exercisedb/        embedded seed JSON + loader            (later)
+  exercisedb/        embedded seed JSON + loader
+  media/             S3 bucket for pack pictures
+  pack/              exercise pack readers (repdb-free)
   importer/          Hevy / Strong CSV parsers              (later)
   api/               net/http ServeMux, JSON, auth middleware
   mail/              verification + invite emails            (later)
@@ -130,6 +162,8 @@ web/                 React app, go:embed web/dist
   missing key, as in kipitrek.
 - PWA: manifest, later a service worker for the app shell and a wake lock during a workout.
 - Image `ghcr.io/kipit-labs/kipitfit`, pinned in the homelab ops repo, synced by ArgoCD on k3s.
+- Exercise media in an S3-compatible bucket through `minio-go` (path-style URLs); the homelab's will be the
+  cluster-wide RustFS.
 - k3s, set up like expense-tracker (PocketBase SQLite): 1 replica, `Recreate`, `/data` on a `longhorn` ReadWriteOnce
   PVC, secrets through proton-pass-sync.
 - Backups: the `kipitfit` namespace goes into Velero's `daily-backup` `includedNamespaces`, so Longhorn snapshots reach
@@ -230,14 +264,18 @@ One PR stack per phase.
 1. **kipitidy 0.2.0** — shared components moved into the kit and released. Done.
 2. **Skeleton from kipitiny** — config, ids, sqlitedb, store pattern, auth (sessions, fail limiter), api middleware
    and the embed. Invite-only accounts and admin invites. React shell with kipitidy, i18n en/fr with the missing-key
-   tests, login, tab bar. Docker image, CI, release workflow. *Done locally, minus passkeys and mail; still to do: the
-   ops repo (namespace, Deployment, Service, Ingress, longhorn PVC, ProtonPassSecret, ArgoCD Application, the namespace
-   added to the Velero schedule).*
+   tests, login, tab bar. Docker image, CI, release workflow. *Done, minus passkeys and mail. 0.2.0 runs on the
+   homelab (ops repo: namespace, Deployment, Service, Ingress, longhorn PVC, ArgoCD Application, the namespace in the
+   Velero schedule).*
 3. **Exercise library** — seed loader, search and filters, custom exercises, exercise page without stats. *Done.*
 4. **Routines and the live workout** — folders, routine editor, live workout store on the device, set types,
    supersets, rest timer in the foreground, finish and save. This is the core: it gets the most testing on a real
    iPhone. *Built; still to test on an iPhone. Records and e1RM wait for P5; with no service worker yet (P8) the app
    itself needs signal to open, though a running workout and its finish don't.*
+
+   **Then exercise media**, before P5 — media bucket and `/api/media`, `pack import` with the `repdb-free` adapter
+   (the pack replaces the library), pictures in the list, picker, live workout and exercise page. *Built; the homelab
+   bucket waits for the cluster RustFS.*
 5. **History, records, progress** — workout history and edit, records with live detection, exercise charts, weekly
    stats, calendar, sets per muscle.
 6. **Friends and feed** — friend requests, visibility, feed, kudos, comments, public workout link with OG card.

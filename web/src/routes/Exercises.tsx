@@ -6,16 +6,16 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { cn } from "cn";
 import { Button } from "@kipit-labs/kipitidy/button";
 import { EmptyState } from "@kipit-labs/kipitidy/empty-state";
-import { IconTile } from "@kipit-labs/kipitidy/icon-tile";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@kipit-labs/kipitidy/input-group";
 import { Loading } from "@kipit-labs/kipitidy/loading";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@kipit-labs/kipitidy/select";
 
 import type { ExerciseSummary } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
-import { categories, equipment, equipmentIcon, exercisesQuery, filterExercises, muscles, type Filters } from "@/lib/exercises";
+import { categories, equipment, exercisesQuery, filterExercises, muscles, type Filters } from "@/lib/exercises";
 
 import { ExerciseForm } from "./ExerciseForm";
+import { ExerciseThumb } from "./ExerciseMedia";
 import { PageTitle } from "./Layout";
 
 // Rows rendered at a time; more come as the end of the list scrolls into view.
@@ -209,7 +209,7 @@ function Row({ exercise: e }: { exercise: ExerciseSummary }) {
   return (
     <li>
       <Link to={`/exercises/${e.id}`} className="flex items-center gap-3 py-3">
-        <IconTile icon={equipmentIcon(e.equipment)} />
+        <ExerciseThumb exercise={e} />
         <div className="min-w-0 flex-1 space-y-1">
           <p className="truncate font-medium">{e.name}</p>
           <div className="flex flex-wrap gap-1">

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, useNavigate } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import { cn } from "cn";
 import { Button } from "@kipit-labs/kipitidy/button";
 import { ConfirmDialog } from "@kipit-labs/kipitidy/confirm-dialog";
@@ -38,6 +38,7 @@ import { dispatch, loadPrevious, setLive, useLive } from "@/live/store";
 import { useNow } from "@/live/useNow";
 
 import { CellInput } from "./CellInput";
+import { ExerciseThumb } from "./ExerciseMedia";
 import { ExercisePicker } from "./ExercisePicker";
 import { FinishSheet } from "./FinishSheet";
 import { SetTypeMenu } from "./SetType";
@@ -189,6 +190,9 @@ function ExerciseCard({
       )}
     >
       <div className="flex items-center gap-2">
+        <Link to={`/exercises/${e.exercise.id}`} aria-label={e.exercise.name} className="shrink-0 rounded-lg">
+          <ExerciseThumb exercise={e.exercise} />
+        </Link>
         <div className="min-w-0 flex-1">
           {e.superset && !joinedAbove && (
             <p className="text-xs font-semibold text-primary">{t("routines.superset", { letter: e.superset })}</p>
