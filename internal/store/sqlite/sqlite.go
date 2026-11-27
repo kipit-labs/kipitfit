@@ -156,7 +156,10 @@ func (s *Store) DeleteInvite(ctx context.Context, id string) error {
 	return nil
 }
 
-const libraryVersionKey = "exercise_library_version"
+const (
+	libraryVersionKey = "exercise_library_version"
+	libraryPackKey    = "exercise_library_pack"
+)
 
 func (s *Store) SyncLibrary(ctx context.Context, version string, exs []store.Exercise) (bool, error) {
 	wrote := false
@@ -266,7 +269,7 @@ func (s *Store) DeleteExercise(ctx context.Context, id string) error {
 
 // nonNilLists keeps JSON columns arrays: a nil slice would be stored as null.
 func nonNilLists(e store.Exercise) store.Exercise {
-	for _, l := range []*[]string{&e.PrimaryMuscles, &e.SecondaryMuscles, &e.Instructions} {
+	for _, l := range []*[]string{&e.PrimaryMuscles, &e.SecondaryMuscles, &e.Instructions, &e.Media} {
 		if *l == nil {
 			*l = []string{}
 		}

@@ -23,7 +23,11 @@ import (
 var version = "dev"
 
 func main() {
-	if err := serve(); err != nil {
+	run := serve
+	if len(os.Args) > 1 && os.Args[1] == "pack" {
+		run = func() error { return packCmd(os.Args[2:]) }
+	}
+	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
 	}

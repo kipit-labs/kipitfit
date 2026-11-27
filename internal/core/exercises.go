@@ -22,7 +22,7 @@ var (
 	Equipment  = []string{"barbell", "dumbbell", "kettlebells", "machine", "cable", "ez_curl_bar", "bands",
 		"medicine_ball", "exercise_ball", "foam_roll", "body_only", "other", "none"}
 	Muscles = []string{"abdominals", "abductors", "adductors", "biceps", "calves", "chest", "forearms", "glutes",
-		"hamstrings", "lats", "lower_back", "middle_back", "neck", "quadriceps", "shoulders", "traps", "triceps"}
+		"hamstrings", "hip_flexors", "lats", "lower_back", "middle_back", "neck", "quadriceps", "shoulders", "traps", "triceps"}
 	Levels = []string{"beginner", "intermediate", "expert"}
 )
 
@@ -37,8 +37,15 @@ var (
 func init() { ErrExerciseName.Params = map[string]any{"max": maxExerciseName} }
 
 // SyncExercises brings the library in line with the embedded dataset; a
-// no-op when it already is.
+// no-op when it already is, or when a pack replaced it.
 func (c *Core) SyncExercises(ctx context.Context) error {
+	// An imported pack replaced the built-in library: don't bring it back.
+	if p, err := c.store.LibraryPack(ctx); err == nil {
+		c.log.Info("exercise library from a pack", "pack", p.Name, "version", p.Version)
+		return nil
+	} else if !errors.Is(err, store.ErrNotFound) {
+		return err
+	}
 	start := time.Now()
 	exs, err := exercisedb.Load()
 	if err != nil {

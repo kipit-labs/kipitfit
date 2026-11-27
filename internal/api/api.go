@@ -60,6 +60,7 @@ func New(c *core.Core, cfg config.Config, log *slog.Logger) *API {
 	mux.HandleFunc("DELETE /api/workouts/{id}", a.deleteWorkout)
 	mux.HandleFunc("GET /api/previous", a.previous)
 	mux.HandleFunc("GET /api/media/{key...}", a.media)
+	mux.HandleFunc("GET /api/library", a.library)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such endpoint", nil)
 	})
