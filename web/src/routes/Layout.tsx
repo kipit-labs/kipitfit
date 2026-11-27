@@ -36,6 +36,7 @@ export function Layout() {
     onFinishSaved(() => {
       toast.success(t("live.saved"));
       void qc.invalidateQueries({ queryKey: routinesQuery.queryKey });
+      void qc.invalidateQueries({ queryKey: ["progress"] });
     });
     const send = () => void flush(me.id);
     send();

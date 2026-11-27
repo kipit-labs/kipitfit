@@ -1,5 +1,6 @@
 // The live workout: a pure model the device keeps in localStorage after every change.
-import type { ExerciseKind, ExerciseSummary, Routine, RoutineInput, RoutineSet, SetType } from "@/lib/api";
+import type { ExerciseKind, ExerciseSummary, RecordKind, Routine, RoutineInput, RoutineSet, SetType } from "@/lib/api";
+import { beaten } from "@/lib/records";
 import { defaultRestS, leaveSuperset, move, relabel, supersetWithNext } from "@/lib/routines";
 import { fieldsOf } from "@/lib/sets";
 
@@ -47,6 +48,8 @@ export type Live = {
   exercises: LiveExercise[];
   /** Each exercise's sets from last time, by exercise id. */
   previous: Record<string, LoggedSet[]>;
+  /** Each exercise's bests before this workout, by exercise id; missing when never done or not loaded yet. */
+  bests?: Record<string, Partial<Record<RecordKind, number>>>;
   rest?: { endsAt: number; totalS: number };
   nextKey: number;
 };
@@ -80,7 +83,7 @@ export function start(id: string, userId: string, now: number, routine?: Routine
 }
 
 export type Action =
-  | { type: "previous"; previous: Record<string, LoggedSet[]> }
+  | { type: "previous"; previous: Record<string, LoggedSet[]>; bests: NonNullable<Live["bests"]> }
   | { type: "addExercises"; exercises: ExerciseSummary[] }
   | { type: "removeExercise"; i: number }
   | { type: "moveExercise"; i: number; by: -1 | 1 }
@@ -99,7 +102,7 @@ export function reduce(live: Live, a: Action): Live {
   const at = (i: number, f: (e: LiveExercise) => LiveExercise) => exs.map((e, k) => (k === i ? f(e) : e));
   switch (a.type) {
     case "previous":
-      return { ...live, previous: { ...live.previous, ...a.previous } };
+      return { ...live, previous: { ...live.previous, ...a.previous }, bests: { ...live.bests, ...a.bests } };
     case "addExercises":
       return {
         ...live,
@@ -191,6 +194,15 @@ export function volumeOf(live: Live): number {
   }
   return g;
 }
+
+/**
+ * The records exercise i's done sets beat so far.
+ * shortcut: an exercise done twice in a workout is judged per card, where the server sums both; fine until it shows.
+ */
+export const recordsOf = (live: Live, i: number) => {
+  const e = live.exercises[i];
+  return beaten(e.exercise.kind, e.sets, live.bests?.[e.exercise.id]);
+};
 
 export const doneSets = (live: Live) => live.exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);
 

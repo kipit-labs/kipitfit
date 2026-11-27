@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ExerciseSummary, Routine } from "@/lib/api";
 
-import { doneSets, reduce, start, toWorkout, updatedRoutine, volumeOf, type Live } from "./model";
+import { doneSets, recordsOf, reduce, start, toWorkout, updatedRoutine, volumeOf, type Live } from "./model";
 import { ulid } from "./ulid";
 
 const ex = (id: string, kind: ExerciseSummary["kind"] = "weight_reps"): ExerciseSummary => ({
@@ -55,12 +55,36 @@ describe("live workout", () => {
     expect(l.exercises[0].sets[0]).toMatchObject({ done: true, weightG: 40000, reps: 10 });
     expect(l.rest).toEqual({ endsAt: t0 + 1000 + 90_000, totalS: 90 });
     // Last time's set wins over the target.
-    l = run(l, { type: "previous", previous: { bench: [{ type: "warmup", weightG: 40000, reps: 10, rpe: null, durationS: null, distanceM: null }, { type: "normal", weightG: 85000, reps: 6, rpe: 80, durationS: null, distanceM: null }] } });
+    l = run(l, { type: "previous", previous: { bench: [{ type: "warmup", weightG: 40000, reps: 10, rpe: null, durationS: null, distanceM: null }, { type: "normal", weightG: 85000, reps: 6, rpe: 80, durationS: null, distanceM: null }] }, bests: {} });
     l = run(l, { type: "updateSet", i: 0, j: 1, patch: { reps: 7 } }, { type: "toggleSet", i: 0, j: 1, now: t0 });
     expect(l.exercises[0].sets[1]).toMatchObject({ done: true, weightG: 85000, reps: 7 });
     // Unticking keeps the values.
     l = run(l, { type: "toggleSet", i: 0, j: 1, now: t0 });
     expect(l.exercises[0].sets[1]).toMatchObject({ done: false, weightG: 85000 });
+  });
+
+  it("badges the done sets that beat a best, never a first time", () => {
+    let l = run(start("id", "u", t0), { type: "addExercises", exercises: [bench, plank] });
+    l = run(
+      l,
+      { type: "previous", previous: {}, bests: { bench: { e1rm: 116667, weight: 100000, set_volume: 500000, session_volume: 500000, reps: 5 } } },
+      { type: "updateSet", i: 0, j: 0, patch: { weightG: 100000, reps: 6 } },
+      { type: "toggleSet", i: 0, j: 0, now: t0 },
+      { type: "addSet", i: 0 },
+      { type: "updateSet", i: 0, j: 1, patch: { weightG: 110000, reps: 3 } },
+      { type: "updateSet", i: 1, j: 0, patch: { durationS: 60 } },
+      { type: "toggleSet", i: 1, j: 0, now: t0 },
+    );
+    // Set 2 isn't ticked yet: only set 1 counts.
+    expect(recordsOf(l, 0)).toEqual([
+      { kind: "e1rm", value: 120000, previous: 116667, set: 0 },
+      { kind: "set_volume", value: 600000, previous: 500000, set: 0 },
+      { kind: "session_volume", value: 600000, previous: 500000, set: -1 },
+      { kind: "reps", value: 6, previous: 5, set: 0 },
+    ]);
+    l = run(l, { type: "toggleSet", i: 0, j: 1, now: t0 });
+    expect(recordsOf(l, 0).map((r) => `${r.kind}@${r.set}`)).toEqual(["e1rm@1", "weight@1", "set_volume@0", "session_volume@-1", "reps@0"]);
+    expect(recordsOf(l, 1)).toEqual([]); // the plank was never done
   });
 
   it("won't tick a set missing a value with no hint", () => {

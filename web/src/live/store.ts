@@ -56,11 +56,12 @@ export function dispatch(a: Action) {
   if (live) setLive(reduce(live, a));
 }
 
-/** Fetches last time's sets of exercises into the live workout; offline, the column stays empty. */
+/** Fetches last time's sets and the bests of exercises into the live workout; offline, both stay empty. */
 export async function loadPrevious(ids: string[]) {
   if (!ids.length) return;
   try {
-    dispatch({ type: "previous", previous: await api.previous(ids) });
+    const [previous, bests] = await Promise.all([api.previous(ids), api.bests(ids)]);
+    dispatch({ type: "previous", previous, bests });
   } catch {
     // No signal: "previous" is a nicety.
   }

@@ -281,7 +281,10 @@
     "saving": "Enregistrement…",
     "willRetry": "Pas encore enregistrée : nouvel essai au retour du réseau.",
     "discardFinish": "Abandonner cette séance",
-    "discardFinishDescription": "Elle n'a jamais été enregistrée : ses séries seront perdues."
+    "discardFinishDescription": "Elle n'a jamais été enregistrée : ses séries seront perdues.",
+    "newRecords_one": "Nouveau record",
+    "newRecords_many": "{{count}} nouveaux records",
+    "newRecords_other": "{{count}} nouveaux records"
   },
   "errors": {
     "generic": "Une erreur est survenue",

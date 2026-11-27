@@ -9,8 +9,10 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 
 import type { Unit } from "@/lib/api";
 import { formatDuration, formatWeight } from "@/lib/units";
-import { doneSets, toWorkout, updatedRoutine, volumeOf, type Live, type RoutineUpdate } from "@/live/model";
+import { doneSets, recordsOf, toWorkout, updatedRoutine, volumeOf, type Live, type RoutineUpdate } from "@/live/model";
 import { finish } from "@/live/store";
+
+import { RecordBadge } from "./RecordBadge";
 
 /** Ends the live workout: summary, title, notes, what to do with the routine, then save. */
 export function FinishSheet({
@@ -49,6 +51,7 @@ function Form({ live, title: initial, unit }: { live: Live; title: string; unit:
   const [notes, setNotes] = useState("");
   const [update, setUpdate] = useState<RoutineUpdate>("keep");
   const sets = doneSets(live);
+  const records = live.exercises.flatMap((e, i) => recordsOf(live, i).map((r) => ({ key: `${e.key}-${r.kind}`, name: e.exercise.name, r })));
   const save = () => {
     const body = updatedRoutine(live, update);
     finish(
@@ -75,6 +78,19 @@ function Form({ live, title: initial, unit }: { live: Live; title: string; unit:
         <Fact label={t("live.volume")} value={`${formatWeight(volumeOf(live), unit)} ${unit}`} />
         <Fact label={t("live.sets")} value={String(sets)} />
       </dl>
+      {records.length > 0 && (
+        <section className="space-y-2" aria-label={t("live.newRecords", { count: records.length })}>
+          <h3 className="text-sm font-medium">{t("live.newRecords", { count: records.length })}</h3>
+          <ul className="space-y-1.5">
+            {records.map(({ key, name, r }) => (
+              <li key={key} className="flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0 truncate">{name}</span>
+                <RecordBadge kind={r.kind} value={r.value} unit={unit} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <FloatingInput label={t("live.title")} required maxLength={100} value={title} onChange={(e) => setTitle(e.target.value)} />
       <FloatingTextarea label={t("routines.notes")} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
       {live.routine && (
