@@ -9,8 +9,8 @@ Input: a GitHub issue (`gh issue view <n> --comments`) or a description. Five ph
 
 1. **Understand.** Restate what happens, what should happen and what says so (README, CLAUDE.md, docs/design.md), and
    the code involved. Ask only when the expected behavior is genuinely unclear.
-2. **Reproduce.** Write the regression test first, next to the existing tests of that code (store tests on a temp
-   SQLite, core tests, api tests with httptest, vitest in `web/`, a Playwright test in `web/e2e` for a bug only a browser
+2. **Reproduce.** Write the regression test first, next to the existing tests of that code (adapter tests on a
+   temp SQLite, use case tests on the fakes, handler tests with httptest, vitest in `web/`, a Playwright test in `web/e2e` for a bug only a browser
    shows), and see it fail for the reason found. Can't
    reproduce: say what you tried and ask before changing code.
 3. **Fix** the root cause once, in the shared code: grep every caller of what you change. Branch `fix/<short-name>`

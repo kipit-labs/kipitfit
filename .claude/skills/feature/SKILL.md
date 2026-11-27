@@ -10,8 +10,8 @@ Four phases, in order. Never skip the questions or the real-usage tests.
 ## 1. Explore and plan
 
 - Read `CLAUDE.md`, the part of `docs/design.md` the feature belongs to (its "Build order" phase, data model,
-  endpoints, domain rules) and the code it touches: migrations, `store`, `core`, `api`, the web route, both locale
-  catalogs.
+  endpoints, domain rules) and the code it touches: migrations, `domain`, the use case, the SQLite adapter, the
+  handlers in `delivery/http`, the web feature, both locale catalogs.
 - Write a plan: what changes where, the PR split (multi-step work = a `gh stack`, one `feat/...` branch per step),
   and the real-usage test list for phase 3.
 - **Ask before implementing.** List every open question, ambiguity and contradiction (with CLAUDE.md rules,
@@ -20,9 +20,10 @@ Four phases, in order. Never skip the questions or the real-usage tests.
 
 ## 2. Implement
 
-Follow CLAUDE.md: a new goose migration (never edit a released one), store methods with tests on a temp SQLite, logic
-and its tests in `core`, thin handlers in `api`, coded errors translated in both catalogs, every UI string in both
-locales. Update `README.md` (API table, configuration) and `docs/design.md` when behavior or the plan changes.
+Follow CLAUDE.md: a new goose migration (never edit a released one), the entity or port in `internal/domain`, repository
+methods in `internal/infrastructure/sqlite` with tests on a temp SQLite, logic and its unit tests (fakes in
+`fakes_test.go`) in `internal/usecase/<area>`, thin handlers in `internal/delivery/http`, a new route in `routeAccess`,
+the page in `web/src/features/<area>`, coded errors translated in both catalogs, every UI string in both locales. Update `README.md` (API table, configuration) and `docs/design.md` when behavior or the plan changes.
 `make cover`, `make test`, `make e2e` and `make lint` green before phase 3.
 
 ## 3. Test in real usage
