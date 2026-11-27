@@ -185,9 +185,14 @@ simplest for a reorderable editor; `PUT /api/routines/order` reorders folders an
 ## Rules of the domain
 
 ### Live workout on the phone
-Gyms have bad signal. The live workout is a client store persisted to IndexedDB after every change, never a server
-row. Starting fetches routine + "previous" once; finishing sends one `PUT /api/workouts/{ulid}`, retried until it
-lands. A reload or a dead battery resumes where you were. One live workout per device.
+Gyms have bad signal. The live workout is a client store (`web/src/live`, a pure reducer) saved as JSON to
+localStorage after every change, never a server row: a few kB, so IndexedDB isn't worth its API. Starting copies the
+routine into it and fetches "previous" once. Finishing queues one `PUT /api/workouts/{ulid}` (plus the routine's
+update, if picked) in a localStorage outbox, sent at once and retried with backoff (2 s doubling to a minute) until a
+2xx; the outbox is sent again when the app opens and when the signal comes back, and the Workout tab shows Saving /
+Will retry. A refusal that retrying won't fix (a 4xx) stays queued with its error until the user retries or discards
+it. A reload or a dead battery resumes where you were. One live workout per device: starting another asks to resume or
+discard it.
 
 ### Rest timer
 Stored as `endsAt`, not a countdown, so it survives the screen locking. In the foreground the app beeps and vibrates;
@@ -231,7 +236,8 @@ One PR stack per phase.
 3. **Exercise library** — seed loader, search and filters, custom exercises, exercise page without stats. *Done.*
 4. **Routines and the live workout** — folders, routine editor, live workout store on the device, set types,
    supersets, rest timer in the foreground, finish and save. This is the core: it gets the most testing on a real
-   iPhone.
+   iPhone. *Built; still to test on an iPhone. Records and e1RM wait for P5; with no service worker yet (P8) the app
+   itself needs signal to open, though a running workout and its finish don't.*
 5. **History, records, progress** — workout history and edit, records with live detection, exercise charts, weekly
    stats, calendar, sets per muscle.
 6. **Friends and feed** — friend requests, visibility, feed, kudos, comments, public workout link with OG card.
