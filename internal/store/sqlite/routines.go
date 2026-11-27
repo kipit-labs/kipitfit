@@ -57,7 +57,8 @@ func getRoutine(ctx context.Context, db bun.IDB, userID, id string) (store.Routi
 
 // routines selects into model with each routine's exercises and sets in order.
 func routines(db bun.IDB, model any) *bun.SelectQuery {
-	return db.NewSelect().Model(model).
+	return db.NewSelect().Model(model).ColumnExpr("r.*").
+		ColumnExpr("(SELECT MAX(w.ended_at) FROM workouts AS w WHERE w.routine_id = r.id) AS last_done_at").
 		Relation("Exercises", func(q *bun.SelectQuery) *bun.SelectQuery { return q.Order("re.position") }).
 		Relation("Exercises.Exercise", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.ExcludeColumn("instructions", "force", "level", "mechanic", "created_at", "updated_at")

@@ -246,7 +246,9 @@ func (s *Store) UpdateExercise(ctx context.Context, e store.Exercise) (store.Exe
 
 func (s *Store) DeleteExercise(ctx context.Context, id string) error {
 	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		used, err := tx.NewSelect().Table("routine_exercises").Where("exercise_id = ?", id).Exists(ctx)
+		var used bool
+		err := tx.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM routine_exercises WHERE exercise_id = ?) "+
+			"OR EXISTS (SELECT 1 FROM workout_exercises WHERE exercise_id = ?)", id, id).Scan(&used)
 		if err != nil {
 			return err
 		}

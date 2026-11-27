@@ -54,6 +54,11 @@ func New(c *core.Core, cfg config.Config, log *slog.Logger) *API {
 	mux.HandleFunc("POST /api/folders", a.createFolder)
 	mux.HandleFunc("PATCH /api/folders/{id}", a.renameFolder)
 	mux.HandleFunc("DELETE /api/folders/{id}", a.deleteFolder)
+	mux.HandleFunc("GET /api/workouts", a.listWorkouts)
+	mux.HandleFunc("GET /api/workouts/{id}", a.getWorkout)
+	mux.HandleFunc("PUT /api/workouts/{id}", a.putWorkout)
+	mux.HandleFunc("DELETE /api/workouts/{id}", a.deleteWorkout)
+	mux.HandleFunc("GET /api/previous", a.previous)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such endpoint", nil)
 	})

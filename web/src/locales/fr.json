@@ -260,6 +260,11 @@
     "too_many_sets": "Un exercice compte au plus {{max}} séries.",
     "set_type_invalid": "Une série a un type inconnu de l'app.",
     "set_value_invalid": "Une série a une valeur hors limites, ou que son exercice ne prend pas.",
-    "superset_invalid": "Un superset est nommé par une lettre, de A à Z."
+    "superset_invalid": "Un superset est nommé par une lettre, de A à Z.",
+    "workout_id_invalid": "L'app a envoyé une séance sans identifiant valide.",
+    "workout_times_invalid": "Une séance finit après son début, dans la journée.",
+    "workout_empty": "Enregistrez d'abord au moins une série.",
+    "set_value_missing": "Il manque à une série une valeur que son exercice demande.",
+    "rpe_invalid": "Le RPE va de 6 à 10 par pas de 0,5."
   }
 }
