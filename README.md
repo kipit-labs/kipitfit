@@ -134,6 +134,7 @@ Errors answer `{"error": "...", "code": "...", "params": {...}}`; the app shows 
 | DELETE | `/api/workouts/{id}` | session | Deletes a workout; records are worked out from what's left. |
 | GET | `/api/previous?exercise=a,b,c` | session | `{exerciseId: sets}`: each exercise's sets in your latest workout that has it (at most 50 exercises). |
 | GET | `/api/bests?exercise=a,b,c` | session | `{exerciseId: {kind: value}}`: your current bests, for spotting records while logging (at most 50 exercises; never-done ones left out). |
+| GET | `/api/stats?from=<RFC 3339>` | session | each workout since `from` (≤ 400 days back), oldest first: `{id, startedAt, endedAt, volumeG, sets, muscles: {muscle: working sets}}` |
 | GET | `/api/library` | session | `{pack, media}`: the imported pack (`name`, `version`, `credit`, `creditUrl`), `null` for the built-in library; whether a media bucket is set. |
 | GET | `/api/media/{key}` | session | A pack picture from the bucket (`media` keys of an exercise), cached for a year. |
 

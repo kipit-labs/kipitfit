@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/kipit-labs/kipitfit/internal/store"
 )
@@ -46,4 +47,11 @@ func (a *API) bests(w http.ResponseWriter, r *http.Request) {
 	}
 	b, err := a.core.Bests(r.Context(), user(r), exs)
 	reply(a, w, http.StatusOK, b, err)
+}
+
+func (a *API) stats(w http.ResponseWriter, r *http.Request) {
+	// A from that doesn't parse is the zero time, which core refuses with its coded error.
+	from, _ := time.Parse(time.RFC3339, r.URL.Query().Get("from"))
+	st, err := a.core.Stats(r.Context(), user(r), from)
+	reply(a, w, http.StatusOK, st, err)
 }

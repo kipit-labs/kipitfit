@@ -3,8 +3,10 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 // twoSessions sets up an admin, invites a friend, and returns both sessions.
@@ -156,6 +158,13 @@ func TestWorkoutsAPI(t *testing.T) {
 	}
 	if w := do(a, "GET", "/api/bests?exercise="+ex.ID, "", me, ""); !strings.Contains(w.Body.String(), `"weight":110000`) {
 		t.Errorf("bests: %s", w.Body)
+	}
+	from := url.QueryEscape(time.Now().AddDate(0, 0, -30).Format(time.RFC3339))
+	if w := do(a, "GET", "/api/stats?from="+from, "", me, ""); w.Code != http.StatusOK || !strings.HasPrefix(w.Body.String(), "[") {
+		t.Errorf("stats: %d %s", w.Code, w.Body)
+	}
+	if w := do(a, "GET", "/api/stats?from=yesterday", "", me, ""); w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), `"code":"stats_from_invalid"`) {
+		t.Errorf("stats from a bad time: %d %s", w.Code, w.Body)
 	}
 	if w := do(a, "DELETE", "/api/workouts/"+id, "", friend, ""); w.Code != http.StatusNotFound {
 		t.Errorf("friend deletes my workout: %d", w.Code)

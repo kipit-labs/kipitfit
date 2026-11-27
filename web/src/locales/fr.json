@@ -39,7 +39,28 @@
   },
   "progress": {
     "emptyTitle": "Aucun progrès à afficher",
-    "emptyDescription": "Graphiques et records apparaissent dès vos premières séances."
+    "emptyDescription": "Graphiques et records apparaissent dès vos premières séances.",
+    "thisWeek": "Cette semaine",
+    "workouts": "Séances",
+    "lastWeek": "sem. passée {{value}}",
+    "weeks": "12 dernières semaines",
+    "hours": "Heures",
+    "volume": "Volume ({{unit}})",
+    "weekOf": "Semaine du {{date}}",
+    "trainingDays_one": "{{count}} jour d'entraînement",
+    "trainingDays_many": "{{count}} jours d'entraînement",
+    "trainingDays_other": "{{count}} jours d'entraînement",
+    "previousMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "trainedOn_one": "{{date}} : {{count}} séance",
+    "trainedOn_many": "{{date}} : {{count}} séances",
+    "trainedOn_other": "{{date}} : {{count}} séances",
+    "muscles": "Séries par muscle",
+    "musclesDescription": "Séries de travail, par muscle principal.",
+    "days_one": "{{count}} jour",
+    "days_many": "{{count}} jours",
+    "days_other": "{{count}} jours",
+    "noSets": "Aucune série sur cette période."
   },
   "me": {
     "profile": "Profil",
@@ -333,7 +354,8 @@
     "workout_times_invalid": "Une séance finit après son début, dans la journée.",
     "workout_empty": "Enregistrez d'abord au moins une série.",
     "set_value_missing": "Il manque à une série une valeur que son exercice demande.",
-    "rpe_invalid": "Le RPE va de 6 à 10 par pas de 0,5."
+    "rpe_invalid": "Le RPE va de 6 à 10 par pas de 0,5.",
+    "stats_from_invalid": "La période demandée doit commencer dans les {{days}} derniers jours."
   },
   "records": {
     "pr": "Record",

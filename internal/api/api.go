@@ -59,6 +59,7 @@ func New(c *core.Core, cfg config.Config, log *slog.Logger) *API {
 	mux.HandleFunc("GET /api/workouts/{id}", a.getWorkout)
 	mux.HandleFunc("PUT /api/workouts/{id}", a.putWorkout)
 	mux.HandleFunc("DELETE /api/workouts/{id}", a.deleteWorkout)
+	mux.HandleFunc("GET /api/stats", a.stats)
 	mux.HandleFunc("GET /api/previous", a.previous)
 	mux.HandleFunc("GET /api/bests", a.bests)
 	mux.HandleFunc("GET /api/media/{key...}", a.media)

@@ -17,7 +17,8 @@ import { Exercises } from "./routes/Exercises";
 import { History, WorkoutDetail } from "./routes/History";
 import { Me } from "./routes/Me";
 import { Live } from "./routes/Live";
-import { Feed, Progress } from "./routes/Placeholders";
+import { Feed } from "./routes/Placeholders";
+import { Progress } from "./routes/Progress";
 import { RoutineEditor } from "./routes/RoutineEditor";
 import { Workout } from "./routes/Workout";
 
