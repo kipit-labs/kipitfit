@@ -1,4 +1,4 @@
-package core
+package workouts
 
 import (
 	"context"
@@ -28,11 +28,11 @@ type WorkoutStats struct {
 }
 
 // Stats lists me's workouts started since from, oldest first, in figures.
-func (c *Core) Stats(ctx context.Context, me domain.User, from time.Time) ([]WorkoutStats, error) {
+func (s *Service) Stats(ctx context.Context, me domain.User, from time.Time) ([]WorkoutStats, error) {
 	if from.IsZero() || time.Since(from) > maxStatsDays*24*time.Hour {
 		return nil, ErrStatsFrom
 	}
-	ws, err := c.store.WorkoutsSince(ctx, me.ID, from)
+	ws, err := s.repo.WorkoutsSince(ctx, me.ID, from)
 	if err != nil {
 		return nil, err
 	}

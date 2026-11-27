@@ -1,4 +1,4 @@
-package core
+package auth
 
 import (
 	"context"
@@ -6,34 +6,25 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
-	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/domain"
-	"github.com/kipit-labs/kipitfit/internal/exercisedb"
-	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
-	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
 )
 
 const pw = "correct horse"
 
-func newCore(t *testing.T) (*Core, *sqlite.Store) {
+func newService(t *testing.T) (*Service, *fakeUsers) {
 	t.Helper()
-	st, err := sqlite.Open(context.Background(), filepath.Join(t.TempDir(), "kipitfit.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	c := New(config.Config{SetupToken: "setup", AppURL: "https://fit.example"}, st, security.NewBcryptHasher(0), exercisedb.Dataset{}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	users := newFakeUsers()
+	c := NewService(users, fakeHasher{}, "setup", "https://fit.example", slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err := c.InitAuth(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	return c, st
+	return c, users
 }
 
-func newAdmin(t *testing.T, c *Core) domain.User {
+func newAdmin(t *testing.T, c *Service) domain.User {
 	t.Helper()
 	u, _, err := c.Setup(context.Background(), "setup", "Admin@Example.com ", "Admin", pw)
 	if err != nil {
@@ -44,7 +35,7 @@ func newAdmin(t *testing.T, c *Core) domain.User {
 
 func TestSetup(t *testing.T) {
 	ctx := context.Background()
-	c, _ := newCore(t)
+	c, _ := newService(t)
 	if _, _, err := c.Setup(ctx, "wrong", "a@b.c", "", pw); !errors.Is(err, ErrWrongSetupToken) {
 		t.Fatalf("wrong token: err = %v", err)
 	}
@@ -68,7 +59,7 @@ func TestSetup(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	ctx := context.Background()
-	c, _ := newCore(t)
+	c, _ := newService(t)
 	newAdmin(t, c)
 	if _, _, err := c.Login(ctx, "admin@example.com", "wrong password"); !errors.Is(err, ErrWrongCredentials) {
 		t.Fatalf("bad password: err = %v", err)
@@ -102,7 +93,7 @@ func inviteToken(t *testing.T, link string) string {
 
 func TestInvites(t *testing.T) {
 	ctx := context.Background()
-	c, st := newCore(t)
+	c, st := newService(t)
 	admin := newAdmin(t, c)
 
 	if _, err := c.CreateInvite(ctx, admin, admin.Email); !errors.Is(err, ErrEmailTaken) {
@@ -145,7 +136,7 @@ func TestInvites(t *testing.T) {
 
 func TestUpdateMe(t *testing.T) {
 	ctx := context.Background()
-	c, _ := newCore(t)
+	c, _ := newService(t)
 	admin := newAdmin(t, c)
 	bad := "de"
 	if _, err := c.UpdateMe(ctx, admin, Profile{Language: &bad}); !errors.Is(err, ErrInvalidLanguage) {

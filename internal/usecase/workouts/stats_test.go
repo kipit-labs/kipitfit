@@ -1,4 +1,4 @@
-package core
+package workouts
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 
 func TestStats(t *testing.T) {
 	ctx := context.Background()
-	c, me, friend := twoUsers(t)
-	lift := byKind(t, c, me, domain.KindWeightReps)
+	c := newEnv()
+	me, friend, lift := c.me, c.friend, c.byKind[domain.KindWeightReps]
 	at := time.Now().UTC().Truncate(time.Second).Add(-48 * time.Hour)
 	put := func(start time.Time, sets ...domain.WorkoutSet) {
 		t.Helper()

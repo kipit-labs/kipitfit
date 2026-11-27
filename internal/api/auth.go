@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kipit-labs/kipitfit/internal/core"
+	"github.com/kipit-labs/kipitfit/internal/usecase/auth"
 )
 
 const sessionCookie = "kipitfit_session"
@@ -35,7 +35,7 @@ func (a *API) protect(mux *http.ServeMux) http.Handler {
 			mux.ServeHTTP(w, r)
 			return
 		}
-		u, err := a.core.Authenticate(r.Context(), sessionToken(r))
+		u, err := a.auth.Authenticate(r.Context(), sessionToken(r))
 		if err != nil {
 			a.fail(w, err)
 			return
@@ -80,7 +80,7 @@ func (a *API) setSessionCookie(w http.ResponseWriter, token string, maxAge int) 
 }
 
 func (a *API) authState(w http.ResponseWriter, r *http.Request) {
-	st, err := a.core.AuthState(r.Context(), sessionToken(r))
+	st, err := a.auth.AuthState(r.Context(), sessionToken(r))
 	if err != nil {
 		a.fail(w, err)
 		return
@@ -106,7 +106,7 @@ func (a *API) limited(w http.ResponseWriter, r *http.Request, body any, check fu
 		return
 	}
 	a.limiter.reset(ip)
-	a.setSessionCookie(w, token, int(core.SessionTTL.Seconds()))
+	a.setSessionCookie(w, token, int(auth.SessionTTL.Seconds()))
 	writeJSON(w, status, v)
 }
 
@@ -118,7 +118,7 @@ func (a *API) setup(w http.ResponseWriter, r *http.Request) {
 		Password   string `json:"password"`
 	}
 	a.limited(w, r, &b, func() (any, string, error) {
-		return a.core.Setup(r.Context(), b.SetupToken, b.Email, b.Name, b.Password)
+		return a.auth.Setup(r.Context(), b.SetupToken, b.Email, b.Name, b.Password)
 	}, http.StatusCreated)
 }
 
@@ -128,7 +128,7 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	a.limited(w, r, &b, func() (any, string, error) {
-		return a.core.Login(r.Context(), b.Email, b.Password)
+		return a.auth.Login(r.Context(), b.Email, b.Password)
 	}, http.StatusOK)
 }
 
@@ -139,12 +139,12 @@ func (a *API) acceptInvite(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	a.limited(w, r, &b, func() (any, string, error) {
-		return a.core.AcceptInvite(r.Context(), b.Token, b.Name, b.Password)
+		return a.auth.AcceptInvite(r.Context(), b.Token, b.Name, b.Password)
 	}, http.StatusCreated)
 }
 
 func (a *API) logout(w http.ResponseWriter, r *http.Request) {
-	if err := a.core.Logout(r.Context(), sessionToken(r)); err != nil {
+	if err := a.auth.Logout(r.Context(), sessionToken(r)); err != nil {
 		a.fail(w, err)
 		return
 	}

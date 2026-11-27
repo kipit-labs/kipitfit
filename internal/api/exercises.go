@@ -3,11 +3,11 @@ package api
 import (
 	"net/http"
 
-	"github.com/kipit-labs/kipitfit/internal/core"
+	"github.com/kipit-labs/kipitfit/internal/usecase/exercises"
 )
 
 func (a *API) listExercises(w http.ResponseWriter, r *http.Request) {
-	exs, err := a.core.ListExercises(r.Context(), user(r))
+	exs, err := a.exercises.ListExercises(r.Context(), user(r))
 	if err != nil {
 		a.fail(w, err)
 		return
@@ -16,7 +16,7 @@ func (a *API) listExercises(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) getExercise(w http.ResponseWriter, r *http.Request) {
-	e, err := a.core.GetExercise(r.Context(), user(r), r.PathValue("id"))
+	e, err := a.exercises.GetExercise(r.Context(), user(r), r.PathValue("id"))
 	if err != nil {
 		a.fail(w, err)
 		return
@@ -25,11 +25,11 @@ func (a *API) getExercise(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) createExercise(w http.ResponseWriter, r *http.Request) {
-	var in core.ExerciseInput
+	var in exercises.ExerciseInput
 	if !decode(w, r, &in) {
 		return
 	}
-	e, err := a.core.CreateExercise(r.Context(), user(r), in)
+	e, err := a.exercises.CreateExercise(r.Context(), user(r), in)
 	if err != nil {
 		a.fail(w, err)
 		return
@@ -38,11 +38,11 @@ func (a *API) createExercise(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) updateExercise(w http.ResponseWriter, r *http.Request) {
-	var in core.ExerciseInput
+	var in exercises.ExerciseInput
 	if !decode(w, r, &in) {
 		return
 	}
-	e, err := a.core.UpdateExercise(r.Context(), user(r), r.PathValue("id"), in)
+	e, err := a.exercises.UpdateExercise(r.Context(), user(r), r.PathValue("id"), in)
 	if err != nil {
 		a.fail(w, err)
 		return
@@ -51,7 +51,7 @@ func (a *API) updateExercise(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) deleteExercise(w http.ResponseWriter, r *http.Request) {
-	if err := a.core.DeleteExercise(r.Context(), user(r), r.PathValue("id")); err != nil {
+	if err := a.exercises.DeleteExercise(r.Context(), user(r), r.PathValue("id")); err != nil {
 		a.fail(w, err)
 		return
 	}
@@ -59,6 +59,6 @@ func (a *API) deleteExercise(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) exerciseProgress(w http.ResponseWriter, r *http.Request) {
-	p, err := a.core.ExerciseProgress(r.Context(), user(r), r.PathValue("id"))
+	p, err := a.records.ExerciseProgress(r.Context(), user(r), r.PathValue("id"))
 	reply(a, w, http.StatusOK, p, err)
 }

@@ -1,4 +1,4 @@
-// Package api exposes the core layer over JSON/HTTP.
+// Package api exposes the use cases over JSON/HTTP.
 package api
 
 import (
@@ -10,24 +10,45 @@ import (
 	"time"
 
 	"github.com/kipit-labs/kipitfit/internal/config"
-	"github.com/kipit-labs/kipitfit/internal/core"
 	"github.com/kipit-labs/kipitfit/internal/domain"
+	"github.com/kipit-labs/kipitfit/internal/usecase/auth"
+	"github.com/kipit-labs/kipitfit/internal/usecase/exercises"
+	"github.com/kipit-labs/kipitfit/internal/usecase/library"
+	"github.com/kipit-labs/kipitfit/internal/usecase/records"
+	"github.com/kipit-labs/kipitfit/internal/usecase/routines"
+	"github.com/kipit-labs/kipitfit/internal/usecase/workouts"
 )
 
 // Codes the API itself answers with, next to domain.Codes; each needs a
 // translation under errors.<code> in web/src/locales.
 var apiCodes = []string{"cross_origin", "too_many_attempts", "invalid_body", "not_found", "conflict", "invalid", "internal"}
 
-type API struct {
-	core    *core.Core
-	cfg     config.Config
-	log     *slog.Logger
-	limiter *failLimiter
-	handler http.Handler
+// Services are the use cases the API serves.
+type Services struct {
+	Auth      *auth.Service
+	Exercises *exercises.Service
+	Library   *library.Service
+	Records   *records.Service
+	Routines  *routines.Service
+	Workouts  *workouts.Service
 }
 
-func New(c *core.Core, cfg config.Config, log *slog.Logger) *API {
-	a := &API{core: c, cfg: cfg, log: log, limiter: newFailLimiter(10, 15*time.Minute)}
+type API struct {
+	auth      *auth.Service
+	exercises *exercises.Service
+	library   *library.Service
+	records   *records.Service
+	routines  *routines.Service
+	workouts  *workouts.Service
+	cfg       config.Config
+	log       *slog.Logger
+	limiter   *failLimiter
+	handler   http.Handler
+}
+
+func New(s Services, cfg config.Config, log *slog.Logger) *API {
+	a := &API{auth: s.Auth, exercises: s.Exercises, library: s.Library, records: s.Records, routines: s.Routines,
+		workouts: s.Workouts, cfg: cfg, log: log, limiter: newFailLimiter(10, 15*time.Minute)}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	mux.HandleFunc("GET /api/auth/state", a.authState)
@@ -63,7 +84,7 @@ func New(c *core.Core, cfg config.Config, log *slog.Logger) *API {
 	mux.HandleFunc("GET /api/previous", a.previous)
 	mux.HandleFunc("GET /api/bests", a.bests)
 	mux.HandleFunc("GET /api/media/{key...}", a.media)
-	mux.HandleFunc("GET /api/library", a.library)
+	mux.HandleFunc("GET /api/library", a.libraryInfo)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such endpoint", nil)
 	})

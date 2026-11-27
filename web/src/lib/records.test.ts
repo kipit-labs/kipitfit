@@ -36,7 +36,7 @@ type Case = {
   beaten: Partial<Record<RecordKind, number>>[];
   bests: Partial<Record<RecordKind, number>>;
 };
-const cases: Case[] = JSON.parse(readFileSync(new URL("../../../internal/core/testdata/records.json", import.meta.url), "utf8"));
+const cases: Case[] = JSON.parse(readFileSync(new URL("../../../internal/usecase/records/testdata/records.json", import.meta.url), "utf8"));
 describe("records like the server", () => {
   it.each(cases.map((c) => [c.name, c] as const))("%s", (_, c) => {
     const kind = c.kind;

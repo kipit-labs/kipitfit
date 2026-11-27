@@ -8,7 +8,7 @@ import (
 // media streams a pack picture from the bucket. Keys carry the pack and its
 // version, so a key's content never changes and phones may keep it a year.
 func (a *API) media(w http.ResponseWriter, r *http.Request) {
-	obj, info, err := a.core.Media(r.Context(), r.PathValue("key"))
+	obj, info, err := a.library.Media(r.Context(), r.PathValue("key"))
 	if err != nil {
 		a.fail(w, err)
 		return

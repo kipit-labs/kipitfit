@@ -13,12 +13,17 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/api"
 	"github.com/kipit-labs/kipitfit/internal/config"
-	"github.com/kipit-labs/kipitfit/internal/core"
 	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/exercisedb"
 	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
 	"github.com/kipit-labs/kipitfit/internal/media"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
+	"github.com/kipit-labs/kipitfit/internal/usecase/auth"
+	"github.com/kipit-labs/kipitfit/internal/usecase/exercises"
+	librarysvc "github.com/kipit-labs/kipitfit/internal/usecase/library"
+	"github.com/kipit-labs/kipitfit/internal/usecase/records"
+	"github.com/kipit-labs/kipitfit/internal/usecase/routines"
+	"github.com/kipit-labs/kipitfit/internal/usecase/workouts"
 	"github.com/kipit-labs/kipitfit/web"
 )
 
@@ -107,18 +112,29 @@ func serve() error {
 	return srv.Shutdown(shutdown)
 }
 
-// wire builds the app on an open store: core, the API and the web app behind
-// the real-IP and security-header middleware. m is nil when media is off.
-func wire(ctx context.Context, cfg config.Config, st *sqlite.Store, m domain.MediaStore, log *slog.Logger) (http.Handler, *core.Core, error) {
-	c := core.New(cfg, st, security.NewBcryptHasher(0), exercisedb.Dataset{}, m, log)
-	if err := c.InitAuth(ctx); err != nil {
+// wire builds the app on an open store: the use cases, the API and the web
+// app behind the real-IP and security-header middleware. m is nil when media
+// is off. It returns the library too, for the pack import.
+func wire(ctx context.Context, cfg config.Config, st *sqlite.Store, m domain.MediaStore, log *slog.Logger) (http.Handler, *librarysvc.Service, error) {
+	authSvc := auth.NewService(st, security.NewBcryptHasher(0), cfg.SetupToken, cfg.AppURL, log)
+	if err := authSvc.InitAuth(ctx); err != nil {
 		return nil, nil, err
 	}
-	if err := c.SyncExercises(ctx); err != nil {
+	lib := librarysvc.NewService(st, st, exercisedb.Dataset{}, m, log)
+	if err := lib.SyncExercises(ctx); err != nil {
 		return nil, nil, err
 	}
+	ex := exercises.NewService(st)
+	rec := records.NewService(st, ex)
 	mux := http.NewServeMux()
-	mux.Handle("/api/", api.New(c, cfg, log))
+	mux.Handle("/api/", api.New(api.Services{
+		Auth:      authSvc,
+		Exercises: ex,
+		Library:   lib,
+		Records:   rec,
+		Routines:  routines.NewService(st, ex),
+		Workouts:  workouts.NewService(st, st, ex, rec),
+	}, cfg, log))
 	mux.Handle("/", web.Handler())
-	return api.RealIP(cfg.RealIPHeader, cfg.TrustedProxies)(api.SecureHeaders(mux, cfg.CookieSecure)), c, nil
+	return api.RealIP(cfg.RealIPHeader, cfg.TrustedProxies)(api.SecureHeaders(mux, cfg.CookieSecure)), lib, nil
 }

@@ -31,6 +31,7 @@ linters:
             - github.com/kipit-labs/kipitfit/internal/domain
             - github.com/kipit-labs/kipitfit/internal/usecase
             - github.com/kipit-labs/kipitfit/internal/ids
+            - golang.org/x/sync/errgroup
         infrastructure:
           files: ["**/internal/infrastructure/**"]
           deny:

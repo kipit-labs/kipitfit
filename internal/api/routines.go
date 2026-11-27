@@ -3,12 +3,12 @@ package api
 import (
 	"net/http"
 
-	"github.com/kipit-labs/kipitfit/internal/core"
 	"github.com/kipit-labs/kipitfit/internal/domain"
+	"github.com/kipit-labs/kipitfit/internal/usecase/routines"
 )
 
 func (a *API) listRoutines(w http.ResponseWriter, r *http.Request) {
-	rs, err := a.core.ListRoutines(r.Context(), user(r))
+	rs, err := a.routines.ListRoutines(r.Context(), user(r))
 	reply(a, w, http.StatusOK, rs, err)
 }
 
@@ -17,7 +17,7 @@ func (a *API) createRoutine(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	rt, err := a.core.CreateRoutine(r.Context(), user(r), in)
+	rt, err := a.routines.CreateRoutine(r.Context(), user(r), in)
 	reply(a, w, http.StatusCreated, rt, err)
 }
 
@@ -26,47 +26,47 @@ func (a *API) updateRoutine(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	rt, err := a.core.UpdateRoutine(r.Context(), user(r), r.PathValue("id"), in)
+	rt, err := a.routines.UpdateRoutine(r.Context(), user(r), r.PathValue("id"), in)
 	reply(a, w, http.StatusOK, rt, err)
 }
 
 func (a *API) deleteRoutine(w http.ResponseWriter, r *http.Request) {
-	noContent(a, w, a.core.DeleteRoutine(r.Context(), user(r), r.PathValue("id")))
+	noContent(a, w, a.routines.DeleteRoutine(r.Context(), user(r), r.PathValue("id")))
 }
 
 func (a *API) reorder(w http.ResponseWriter, r *http.Request) {
-	var in core.Order
+	var in routines.Order
 	if !decode(w, r, &in) {
 		return
 	}
-	noContent(a, w, a.core.Reorder(r.Context(), user(r), in))
+	noContent(a, w, a.routines.Reorder(r.Context(), user(r), in))
 }
 
 func (a *API) listFolders(w http.ResponseWriter, r *http.Request) {
-	fs, err := a.core.ListFolders(r.Context(), user(r))
+	fs, err := a.routines.ListFolders(r.Context(), user(r))
 	reply(a, w, http.StatusOK, fs, err)
 }
 
 func (a *API) createFolder(w http.ResponseWriter, r *http.Request) {
-	var in core.FolderInput
+	var in routines.FolderInput
 	if !decode(w, r, &in) {
 		return
 	}
-	f, err := a.core.CreateFolder(r.Context(), user(r), in)
+	f, err := a.routines.CreateFolder(r.Context(), user(r), in)
 	reply(a, w, http.StatusCreated, f, err)
 }
 
 func (a *API) renameFolder(w http.ResponseWriter, r *http.Request) {
-	var in core.FolderInput
+	var in routines.FolderInput
 	if !decode(w, r, &in) {
 		return
 	}
-	f, err := a.core.RenameFolder(r.Context(), user(r), r.PathValue("id"), in)
+	f, err := a.routines.RenameFolder(r.Context(), user(r), r.PathValue("id"), in)
 	reply(a, w, http.StatusOK, f, err)
 }
 
 func (a *API) deleteFolder(w http.ResponseWriter, r *http.Request) {
-	noContent(a, w, a.core.DeleteFolder(r.Context(), user(r), r.PathValue("id")))
+	noContent(a, w, a.routines.DeleteFolder(r.Context(), user(r), r.PathValue("id")))
 }
 
 // reply writes v with status, or the error.

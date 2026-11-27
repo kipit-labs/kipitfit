@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/kipit-labs/kipitfit/internal/core"
+	"github.com/kipit-labs/kipitfit/internal/usecase/auth"
 )
 
 func (a *API) me(w http.ResponseWriter, r *http.Request) {
@@ -11,11 +11,11 @@ func (a *API) me(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) updateMe(w http.ResponseWriter, r *http.Request) {
-	var p core.Profile
+	var p auth.Profile
 	if !decode(w, r, &p) {
 		return
 	}
-	u, err := a.core.UpdateMe(r.Context(), user(r), p)
+	u, err := a.auth.UpdateMe(r.Context(), user(r), p)
 	if err != nil {
 		a.fail(w, err)
 		return
@@ -24,7 +24,7 @@ func (a *API) updateMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) listInvites(w http.ResponseWriter, r *http.Request) {
-	list, err := a.core.ListInvites(r.Context(), user(r))
+	list, err := a.auth.ListInvites(r.Context(), user(r))
 	if err != nil {
 		a.fail(w, err)
 		return
@@ -39,7 +39,7 @@ func (a *API) createInvite(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &b) {
 		return
 	}
-	i, err := a.core.CreateInvite(r.Context(), user(r), b.Email)
+	i, err := a.auth.CreateInvite(r.Context(), user(r), b.Email)
 	if err != nil {
 		a.fail(w, err)
 		return
@@ -48,7 +48,7 @@ func (a *API) createInvite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) deleteInvite(w http.ResponseWriter, r *http.Request) {
-	if err := a.core.DeleteInvite(r.Context(), user(r), r.PathValue("id")); err != nil {
+	if err := a.auth.DeleteInvite(r.Context(), user(r), r.PathValue("id")); err != nil {
 		a.fail(w, err)
 		return
 	}

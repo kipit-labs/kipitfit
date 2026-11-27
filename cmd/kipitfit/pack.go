@@ -17,11 +17,10 @@ import (
 	"time"
 
 	"github.com/kipit-labs/kipitfit/internal/config"
-	"github.com/kipit-labs/kipitfit/internal/core"
 	"github.com/kipit-labs/kipitfit/internal/exercisedb"
-	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
 	"github.com/kipit-labs/kipitfit/internal/pack"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
+	librarysvc "github.com/kipit-labs/kipitfit/internal/usecase/library"
 )
 
 const packUsage = `usage: kipitfit pack import [--sha256 HEX] <pack> [ZIP file or URL]
@@ -102,7 +101,7 @@ func packCmd(args []string) error {
 	}
 	defer st.Close()
 	start := time.Now()
-	res, err := core.New(cfg, st, security.NewBcryptHasher(0), exercisedb.Dataset{}, m, log).ImportPack(ctx, p)
+	res, err := librarysvc.NewService(st, st, exercisedb.Dataset{}, m, log).ImportPack(ctx, p)
 	if err != nil {
 		return err
 	}

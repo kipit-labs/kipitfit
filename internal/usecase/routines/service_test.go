@@ -1,4 +1,4 @@
-package core
+package routines
 
 import (
 	"context"
@@ -7,46 +7,13 @@ import (
 	"testing"
 
 	"github.com/kipit-labs/kipitfit/internal/domain"
+	"github.com/kipit-labs/kipitfit/internal/usecase/exercises"
 )
-
-// twoUsers is an admin and an invited friend on a core with the library synced.
-func twoUsers(t *testing.T) (*Core, domain.User, domain.User) {
-	t.Helper()
-	ctx := context.Background()
-	c, _ := newCore(t)
-	if err := c.SyncExercises(ctx); err != nil {
-		t.Fatal(err)
-	}
-	admin := newAdmin(t, c)
-	link, err := c.CreateInvite(ctx, admin, "friend@example.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	friend, _, err := c.AcceptInvite(ctx, inviteToken(t, link.Link), "Friend", pw)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return c, admin, friend
-}
-
-// byKind is a library exercise of kind k.
-func byKind(t *testing.T, c *Core, me domain.User, k domain.Kind) domain.Exercise {
-	t.Helper()
-	exs, _ := c.ListExercises(context.Background(), me)
-	for _, e := range exs {
-		if e.Kind == k {
-			return e
-		}
-	}
-	t.Fatalf("no %s exercise", k)
-	return domain.Exercise{}
-}
 
 func TestRoutines(t *testing.T) {
 	ctx := context.Background()
-	c, me, friend := twoUsers(t)
-	lift := byKind(t, c, me, domain.KindWeightReps)
-	plank := byKind(t, c, me, domain.KindDuration)
+	c, ex, store, lift, plank := newService()
+	me, friend := domain.User{ID: "me"}, domain.User{ID: "friend"}
 
 	folder, err := c.CreateFolder(ctx, me, FolderInput{Name: "  Push  day "})
 	if err != nil || folder.Name != "Push day" {
@@ -91,22 +58,22 @@ func TestRoutines(t *testing.T) {
 		in   domain.Routine
 		want error
 	}{
-		"blank name":       {domain.Routine{Name: "  "}, ErrTitle},
-		"long name":        {domain.Routine{Name: long}, ErrTitle},
-		"long notes":       {domain.Routine{Name: "R", Notes: strings.Repeat("x", 1001)}, ErrNotesTooLong},
-		"51 exercises":     {domain.Routine{Name: "R", Exercises: exs}, ErrTooManyExercises},
-		"51 sets":          {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: lift.ID, Sets: sets}}}, ErrTooManySets},
-		"bad set type":     {domain.Routine{Name: "R", Exercises: one(domain.RoutineSet{Type: "giant"})}, ErrSetType},
-		"negative weight":  {domain.Routine{Name: "R", Exercises: one(domain.RoutineSet{Type: domain.SetNormal, WeightG: ptr(-1)})}, ErrSetValue},
-		"reps min > max":   {domain.Routine{Name: "R", Exercises: one(domain.RoutineSet{Type: domain.SetNormal, RepsMin: ptr(9), RepsMax: ptr(8)})}, ErrSetValue},
-		"duration on lift": {domain.Routine{Name: "R", Exercises: one(domain.RoutineSet{Type: domain.SetNormal, DurationS: ptr(30)})}, ErrSetValue},
+		"blank name":       {domain.Routine{Name: "  "}, domain.ErrTitle},
+		"long name":        {domain.Routine{Name: long}, domain.ErrTitle},
+		"long notes":       {domain.Routine{Name: "R", Notes: strings.Repeat("x", 1001)}, domain.ErrNotesTooLong},
+		"51 exercises":     {domain.Routine{Name: "R", Exercises: exs}, domain.ErrTooManyExercises},
+		"51 sets":          {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: lift.ID, Sets: sets}}}, domain.ErrTooManySets},
+		"bad set type":     {domain.Routine{Name: "R", Exercises: one(domain.RoutineSet{Type: "giant"})}, domain.ErrSetType},
+		"negative weight":  {domain.Routine{Name: "R", Exercises: one(domain.RoutineSet{Type: domain.SetNormal, WeightG: ptr(-1)})}, domain.ErrSetValue},
+		"reps min > max":   {domain.Routine{Name: "R", Exercises: one(domain.RoutineSet{Type: domain.SetNormal, RepsMin: ptr(9), RepsMax: ptr(8)})}, domain.ErrSetValue},
+		"duration on lift": {domain.Routine{Name: "R", Exercises: one(domain.RoutineSet{Type: domain.SetNormal, DurationS: ptr(30)})}, domain.ErrSetValue},
 		"weight on plank": {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: plank.ID,
-			Sets: []domain.RoutineSet{{Type: domain.SetNormal, WeightG: ptr(1000)}}}}}, ErrSetValue},
-		"bad superset":       {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: lift.ID, Superset: "a"}}}, ErrSuperset},
-		"long rest":          {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: lift.ID, RestS: ptr(3601)}}}, ErrSetValue},
+			Sets: []domain.RoutineSet{{Type: domain.SetNormal, WeightG: ptr(1000)}}}}}, domain.ErrSetValue},
+		"bad superset":       {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: lift.ID, Superset: "a"}}}, domain.ErrSuperset},
+		"long rest":          {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: lift.ID, RestS: ptr(3601)}}}, domain.ErrSetValue},
 		"unknown exercise":   {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: "nope"}}}, domain.ErrNotFound},
 		"someone's folder":   {domain.Routine{Name: "R", FolderID: "nope"}, domain.ErrNotFound},
-		"long exercise note": {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: lift.ID, Notes: strings.Repeat("x", 1001)}}}, ErrNotesTooLong},
+		"long exercise note": {domain.Routine{Name: "R", Exercises: []domain.RoutineExercise{{ExerciseID: lift.ID, Notes: strings.Repeat("x", 1001)}}}, domain.ErrNotesTooLong},
 	} {
 		if _, err := c.CreateRoutine(ctx, me, bad.in); !errors.Is(err, bad.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, bad.want)
@@ -114,7 +81,7 @@ func TestRoutines(t *testing.T) {
 	}
 
 	// The friend can't use my folder, my custom exercise, or touch my routine.
-	mine, err := c.CreateExercise(ctx, me, ExerciseInput{Name: ptr("Landmine Press"), Kind: ptr(domain.KindWeightReps), PrimaryMuscles: &[]string{"shoulders"}})
+	mine, err := ex.CreateExercise(ctx, me, exercises.ExerciseInput{Name: ptr("Landmine Press"), Kind: ptr(domain.KindWeightReps), PrimaryMuscles: &[]string{"shoulders"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,18 +104,14 @@ func TestRoutines(t *testing.T) {
 		t.Errorf("friend deletes my folder: %v", err)
 	}
 
-	// Deleting my custom exercise while a routine uses it archives it.
+	// Deleting my custom exercise while a routine uses it archives it (the store's job, see
+	// sqlite.TestDeleteUsedExerciseArchives): the routine still saves with it.
 	r.Exercises = append(r.Exercises, domain.RoutineExercise{ExerciseID: mine.ID})
 	if r, err = c.UpdateRoutine(ctx, me, r.ID, r); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.DeleteExercise(ctx, me, mine.ID); err != nil {
-		t.Fatal(err)
-	}
-	if got, err := c.GetExercise(ctx, me, mine.ID); err != nil || !got.Archived {
-		t.Errorf("used exercise after delete = %+v, %v", got, err)
-	}
-	// The routine still saves with its archived exercise.
+	mine.Archived = true
+	store.byID[mine.ID] = mine
 	if r, err = c.UpdateRoutine(ctx, me, r.ID, r); err != nil || !r.Exercises[2].Exercise.Archived {
 		t.Errorf("save with an archived exercise = %+v, %v", r.Exercises, err)
 	}

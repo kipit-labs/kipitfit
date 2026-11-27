@@ -14,12 +14,17 @@ import (
 	"testing"
 
 	"github.com/kipit-labs/kipitfit/internal/config"
-	"github.com/kipit-labs/kipitfit/internal/core"
 	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/exercisedb"
 	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
 	"github.com/kipit-labs/kipitfit/internal/media"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
+	"github.com/kipit-labs/kipitfit/internal/usecase/auth"
+	"github.com/kipit-labs/kipitfit/internal/usecase/exercises"
+	"github.com/kipit-labs/kipitfit/internal/usecase/library"
+	"github.com/kipit-labs/kipitfit/internal/usecase/records"
+	"github.com/kipit-labs/kipitfit/internal/usecase/routines"
+	"github.com/kipit-labs/kipitfit/internal/usecase/workouts"
 )
 
 func newAPI(t *testing.T) *API {
@@ -39,11 +44,14 @@ func newAPIMedia(t *testing.T) (*API, *media.Memory) {
 	cfg := config.Config{SetupToken: "setup", AppURL: "http://example.com"}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	m := media.NewMemory()
-	c := core.New(cfg, st, security.NewBcryptHasher(0), exercisedb.Dataset{}, m, log)
-	if err := c.InitAuth(context.Background()); err != nil {
+	authSvc := auth.NewService(st, security.NewBcryptHasher(0), cfg.SetupToken, cfg.AppURL, log)
+	if err := authSvc.InitAuth(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	return New(c, cfg, log), m
+	ex := exercises.NewService(st)
+	rec := records.NewService(st, ex)
+	return New(Services{Auth: authSvc, Exercises: ex, Records: rec, Library: library.NewService(st, st, exercisedb.Dataset{}, m, log),
+		Routines: routines.NewService(st, ex), Workouts: workouts.NewService(st, st, ex, rec)}, cfg, log), m
 }
 
 // do sends a request as from http://example.com (httptest's host).

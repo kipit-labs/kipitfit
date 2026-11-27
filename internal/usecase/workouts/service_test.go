@@ -1,4 +1,4 @@
-package core
+package workouts
 
 import (
 	"context"
@@ -12,12 +12,11 @@ import (
 
 func TestPutWorkout(t *testing.T) {
 	ctx := context.Background()
-	c, me, friend := twoUsers(t)
-	lift := byKind(t, c, me, domain.KindWeightReps)
-	dip := byKind(t, c, me, domain.KindWeightedBodyweight)
-	pullup := byKind(t, c, me, domain.KindAssistedBodyweight)
-	plank := byKind(t, c, me, domain.KindDuration)
-	r, _ := c.CreateRoutine(ctx, me, domain.Routine{Name: "Push"})
+	c := newEnv()
+	me, friend := c.me, c.friend
+	lift, dip := c.byKind[domain.KindWeightReps], c.byKind[domain.KindWeightedBodyweight]
+	pullup, plank := c.byKind[domain.KindAssistedBodyweight], c.byKind[domain.KindDuration]
+	r := c.routines.byID["push"]
 
 	start := time.Date(2026, 11, 20, 18, 0, 0, 0, time.UTC)
 	rpe := domain.Tenths(85)
@@ -65,15 +64,15 @@ func TestPutWorkout(t *testing.T) {
 		"bad id":          {"nope", one(lift, domain.WorkoutSet{Type: n, WeightG: ptr(1), Reps: ptr(1)}), ErrWorkoutID},
 		"ends first":      {ids.New(), domain.Workout{Title: "W", StartedAt: start, EndedAt: start.Add(-time.Second)}, ErrWorkoutTimes},
 		"two days":        {ids.New(), domain.Workout{Title: "W", StartedAt: start, EndedAt: start.Add(48 * time.Hour)}, ErrWorkoutTimes},
-		"no title":        {ids.New(), domain.Workout{StartedAt: start, EndedAt: start}, ErrTitle},
+		"no title":        {ids.New(), domain.Workout{StartedAt: start, EndedAt: start}, domain.ErrTitle},
 		"no sets":         {ids.New(), domain.Workout{Title: "W", StartedAt: start, EndedAt: start, Exercises: []domain.WorkoutExercise{{ExerciseID: lift.ID}}}, ErrWorkoutEmpty},
 		"lift no weight":  {ids.New(), one(lift, domain.WorkoutSet{Type: n, Reps: ptr(5)}), ErrSetMissing},
 		"lift no reps":    {ids.New(), one(lift, domain.WorkoutSet{Type: n, WeightG: ptr(5)}), ErrSetMissing},
-		"plank with reps": {ids.New(), one(plank, domain.WorkoutSet{Type: n, DurationS: ptr(30), Reps: ptr(3)}), ErrSetValue},
+		"plank with reps": {ids.New(), one(plank, domain.WorkoutSet{Type: n, DurationS: ptr(30), Reps: ptr(3)}), domain.ErrSetValue},
 		"plank no time":   {ids.New(), one(plank, domain.WorkoutSet{Type: n}), ErrSetMissing},
 		"rpe 5.5":         {ids.New(), one(lift, domain.WorkoutSet{Type: n, WeightG: ptr(1), Reps: ptr(1), RPE: ptr(domain.Tenths(55))}), ErrRPE},
 		"rpe 8.3":         {ids.New(), one(lift, domain.WorkoutSet{Type: n, WeightG: ptr(1), Reps: ptr(1), RPE: ptr(domain.Tenths(83))}), ErrRPE},
-		"bad type":        {ids.New(), one(lift, domain.WorkoutSet{Type: "x", WeightG: ptr(1), Reps: ptr(1)}), ErrSetType},
+		"bad type":        {ids.New(), one(lift, domain.WorkoutSet{Type: "x", WeightG: ptr(1), Reps: ptr(1)}), domain.ErrSetType},
 		"unknown ex":      {ids.New(), one(domain.Exercise{ID: "nope"}, domain.WorkoutSet{Type: n}), domain.ErrNotFound},
 	} {
 		if _, err := c.PutWorkout(ctx, me, bad.id, bad.in); !errors.Is(err, bad.want) {
@@ -82,9 +81,7 @@ func TestPutWorkout(t *testing.T) {
 	}
 
 	// A finish queued while its routine got deleted still saves, without the routine.
-	if err := c.DeleteRoutine(ctx, me, r.ID); err != nil {
-		t.Fatal(err)
-	}
+	delete(c.routines.byID, r.ID)
 	if w, err := c.PutWorkout(ctx, me, ids.New(), in); err != nil || w.RoutineID != "" {
 		t.Errorf("finish of a deleted routine = %+v, %v", w.RoutineID, err)
 	}
@@ -97,8 +94,8 @@ func TestPutWorkout(t *testing.T) {
 
 func TestListWorkoutsPages(t *testing.T) {
 	ctx := context.Background()
-	c, me, _ := twoUsers(t)
-	plank := byKind(t, c, me, domain.KindDuration)
+	c := newEnv()
+	me, plank := c.me, c.byKind[domain.KindDuration]
 	start := time.Date(2026, 1, 1, 8, 0, 0, 0, time.UTC)
 	for i := range 21 {
 		at := start.Add(time.Duration(i) * 24 * time.Hour)
@@ -115,5 +112,19 @@ func TestListWorkoutsPages(t *testing.T) {
 	page, _ = c.ListWorkouts(ctx, me, page.Next)
 	if len(page.Workouts) != 1 || page.Next != "" || !page.Workouts[0].StartedAt.Equal(start) {
 		t.Fatalf("page 2: %+v", page)
+	}
+}
+
+// An exercise archived since the workout started (deleted while in use, or
+// replaced by a pack) still takes its sets.
+func TestPutWorkoutOnArchivedExercise(t *testing.T) {
+	c := newEnv()
+	lift := c.byKind[domain.KindWeightReps]
+	lift.Archived = true
+	c.store.byID[lift.ID] = lift
+	start := time.Date(2026, 11, 20, 18, 0, 0, 0, time.UTC)
+	if _, err := c.PutWorkout(context.Background(), c.me, ids.New(), domain.Workout{Title: "Legs", StartedAt: start, EndedAt: start.Add(time.Hour),
+		Exercises: []domain.WorkoutExercise{{ExerciseID: lift.ID, Sets: []domain.WorkoutSet{{Type: domain.SetNormal, WeightG: ptr(80000), Reps: ptr(5)}}}}}); err != nil {
+		t.Fatalf("workout on an archived exercise: %v", err)
 	}
 }

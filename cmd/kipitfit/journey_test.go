@@ -17,16 +17,16 @@ import (
 	"testing"
 
 	"github.com/kipit-labs/kipitfit/internal/config"
-	"github.com/kipit-labs/kipitfit/internal/core"
 	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
+	librarysvc "github.com/kipit-labs/kipitfit/internal/usecase/library"
 )
 
 const setupToken = "setup-token"
 
 type testApp struct {
 	url  string
-	core *core.Core
+	core *librarysvc.Service
 }
 
 // newTestApp serves wire() on a fresh database; m is nil for media off.
