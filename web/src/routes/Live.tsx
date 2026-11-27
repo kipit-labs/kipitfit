@@ -30,9 +30,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { Unit } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import { defaultRestS } from "@/lib/routines";
-import { fieldsOf, setLabels, weightSign } from "@/lib/sets";
+import { fieldsOf, setLabels, setText, weightSign } from "@/lib/sets";
 import { formatDuration, formatKm, formatWeight, parseDuration, parseKm, parseWeight } from "@/lib/units";
-import { doneSets, hint, volumeOf, type Live as LiveState, type LiveExercise, type LiveSet, type LoggedSet } from "@/live/model";
+import { doneSets, hint, volumeOf, type Live as LiveState, type LiveExercise, type LiveSet } from "@/live/model";
 import { unlockAudio } from "@/live/signal";
 import { dispatch, loadPrevious, setLive, useLive } from "@/live/store";
 import { useNow } from "@/live/useNow";
@@ -274,7 +274,7 @@ function ExerciseCard({
                   </DropdownMenuItem>
                 </SetTypeMenu>
                 <span className="truncate text-center text-sm text-muted-foreground tabular-nums">
-                  {prev ? previousText(prev, kind, unit) : "—"}
+                  {prev ? setText(prev, kind, unit) : "—"}
                 </span>
                 {f.weight && (
                   <CellInput
@@ -359,10 +359,3 @@ function ExerciseCard({
 /** A whole number of reps; null when blank. */
 const parseCount = (v: string) => (v.trim() === "" ? null : /^\d+$/.test(v.trim()) ? Number(v) : undefined);
 
-function previousText(p: LoggedSet, kind: LiveExercise["exercise"]["kind"], unit: Unit): string {
-  const f = fieldsOf(kind);
-  if (f.distance) return [p.distanceM != null && `${formatKm(p.distanceM)} km`, p.durationS != null && formatDuration(p.durationS)].filter(Boolean).join(" · ");
-  if (f.duration) return p.durationS == null ? "—" : formatDuration(p.durationS);
-  const w = f.weight && p.weightG != null ? weightSign(kind) + formatWeight(p.weightG, unit) : "";
-  return `${w}${w ? " " : ""}× ${p.reps ?? "—"}`;
-}

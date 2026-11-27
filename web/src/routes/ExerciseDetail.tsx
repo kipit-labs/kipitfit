@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { ChevronLeft, Pencil, SearchX, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,13 +10,16 @@ import { EmptyState } from "@kipit-labs/kipitidy/empty-state";
 import { IconTile } from "@kipit-labs/kipitidy/icon-tile";
 import { Loading } from "@kipit-labs/kipitidy/loading";
 import { Section } from "@kipit-labs/kipitidy/section";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@kipit-labs/kipitidy/tabs";
 
 import { api, type Exercise, type ExerciseSummary } from "@/lib/api";
+import { useMe } from "@/lib/auth";
 import { errorMessage } from "@/lib/errors";
 import { equipmentIcon, exercisesQuery } from "@/lib/exercises";
 
 import { ExerciseForm } from "./ExerciseForm";
 import { ExerciseFrames } from "./ExerciseMedia";
+import { History, ProgressChart, Records } from "./ExerciseProgress";
 import { chip } from "./Exercises";
 import { PageTitle } from "./Layout";
 
@@ -57,7 +60,9 @@ export function ExerciseDetail() {
 
 function Details({ exercise: e }: { exercise: Exercise }) {
   const { t } = useTranslation();
+  const { unit } = useMe();
   const [noFrames, setNoFrames] = useState(!e.media?.length);
+  const progress = useQuery({ queryKey: ["progress", "exercise", e.id], queryFn: () => api.exerciseProgress(e.id) });
   const facts = [
     [t("exercises.fields.kind"), t(`exercises.kinds.${e.kind}`)],
     [t("exercises.fields.category"), t(`exercises.categories.${e.category}`)],
@@ -75,36 +80,58 @@ function Details({ exercise: e }: { exercise: Exercise }) {
         </div>
       </div>
       {e.custom && <Actions exercise={e} />}
-      <Section>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-          {facts.map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-xs text-muted-foreground">{label}</dt>
-              <dd className="text-sm font-medium">{value}</dd>
-            </div>
-          ))}
-        </dl>
-        <Muscles label={t("exercises.fields.primaryMuscles")} muscles={e.primaryMuscles} />
-        {e.secondaryMuscles.length > 0 && (
-          <Muscles label={t("exercises.fields.secondaryMuscles")} muscles={e.secondaryMuscles} />
-        )}
-      </Section>
-      {!!e.instructions?.length && (
-        <Section title={t("exercises.fields.instructions")}>
-          <ol className="space-y-3">
-            {e.instructions.map((step, i) => (
-              <li key={i} className="flex gap-3 text-sm">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                  {i + 1}
-                </span>
-                <span className="pt-0.5">{step}</span>
-              </li>
-            ))}
-          </ol>
-        </Section>
-      )}
+      <Tabs defaultValue="summary">
+        <TabsList className="w-full">
+          <TabsTrigger value="summary">{t("exercises.tabs.summary")}</TabsTrigger>
+          <TabsTrigger value="records">{t("exercises.tabs.records")}</TabsTrigger>
+          <TabsTrigger value="history">{t("exercises.tabs.history")}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="summary" className="space-y-4">
+          {progress.data && <ProgressChart kind={e.kind} sessions={progress.data.sessions} unit={unit} />}
+          <Section>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {facts.map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="text-sm font-medium">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <Muscles label={t("exercises.fields.primaryMuscles")} muscles={e.primaryMuscles} />
+            {e.secondaryMuscles.length > 0 && (
+              <Muscles label={t("exercises.fields.secondaryMuscles")} muscles={e.secondaryMuscles} />
+            )}
+          </Section>
+          {!!e.instructions?.length && (
+            <Section title={t("exercises.fields.instructions")}>
+              <ol className="space-y-3">
+                {e.instructions.map((step, i) => (
+                  <li key={i} className="flex gap-3 text-sm">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                      {i + 1}
+                    </span>
+                    <span className="pt-0.5">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </Section>
+          )}
+        </TabsContent>
+        <TabsContent value="records">
+          <Pending query={progress}>{(p) => <Records kind={e.kind} progress={p} unit={unit} />}</Pending>
+        </TabsContent>
+        <TabsContent value="history">
+          <Pending query={progress}>{(p) => <History kind={e.kind} sessions={p.sessions} unit={unit} />}</Pending>
+        </TabsContent>
+      </Tabs>
     </div>
   );
+}
+
+function Pending<T>({ query, children }: { query: UseQueryResult<T>; children: (data: T) => React.ReactNode }) {
+  if (query.isPending) return <Loading className="py-12" />;
+  if (query.isError) return <EmptyState icon={SearchX} title={errorMessage(query.error)} />;
+  return children(query.data);
 }
 
 function Muscles({ label, muscles }: { label: string; muscles: string[] }) {

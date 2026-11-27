@@ -152,7 +152,12 @@
     },
     "archived": "Deleted",
     "play": "Play",
-    "pause": "Pause"
+    "pause": "Pause",
+    "tabs": {
+      "summary": "Summary",
+      "records": "Records",
+      "history": "History"
+    }
   },
   "routines": {
     "title": "Routines",
@@ -315,5 +320,36 @@
     "workout_empty": "Log at least one set first.",
     "set_value_missing": "A set is missing a value its exercise needs.",
     "rpe_invalid": "RPE goes from 6 to 10 in steps of 0.5."
+  },
+  "records": {
+    "pr": "PR",
+    "kinds": {
+      "e1rm": "Estimated 1RM",
+      "weight": "Heaviest weight",
+      "set_volume": "Best set volume",
+      "session_volume": "Best workout volume",
+      "reps": "Most reps",
+      "session_reps": "Most reps in a workout",
+      "duration": "Longest",
+      "distance": "Farthest"
+    },
+    "short": {
+      "e1rm": "e1RM",
+      "weight": "Weight",
+      "set_volume": "Set volume",
+      "session_volume": "Volume",
+      "reps": "Reps",
+      "session_reps": "Total reps",
+      "duration": "Time",
+      "distance": "Distance"
+    },
+    "chartTitle": "Progress",
+    "repRecords": "Rep records",
+    "repRecordsDescription": "Heaviest weight lifted for at least that many reps.",
+    "reps": "Reps",
+    "weight": "Weight ({{unit}})",
+    "date": "Date",
+    "noHistory": "Not done yet",
+    "noHistoryDescription": "Records and history show up after a workout with this exercise."
   }
 }
