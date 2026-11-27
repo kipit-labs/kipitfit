@@ -40,9 +40,9 @@ import { api, ApiError, type Folder, type Routine } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import { errorMessage } from "@/lib/errors";
 import { move, routinesQuery } from "@/lib/routines";
-import { discardFinish, retryFinish, useOutbox } from "@/live/store";
+import { discardFinish, retryFinish, useOutbox } from "@/features/live/store";
 
-import { PageTitle } from "./Layout";
+import { PageTitle } from "@/features/layout/Layout";
 import { NameDialog } from "./NameDialog";
 import { useStartWorkout } from "./StartWorkout";
 

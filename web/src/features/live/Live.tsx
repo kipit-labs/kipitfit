@@ -32,16 +32,16 @@ import { useMe } from "@/lib/auth";
 import { defaultRestS } from "@/lib/routines";
 import { fieldsOf, setLabels, setText, weightSign } from "@/lib/sets";
 import { formatDuration, formatKm, formatWeight, parseDuration, parseKm, parseWeight } from "@/lib/units";
-import { doneSets, elapsedS, hint, recordsOf, volumeOf, type Live as LiveState, type LiveExercise, type LiveSet } from "@/live/model";
-import { unlockAudio } from "@/live/signal";
-import { dispatch, loadPrevious, setLive, useLive } from "@/live/store";
-import { useNow } from "@/live/useNow";
+import { doneSets, elapsedS, hint, recordsOf, volumeOf, type Live as LiveState, type LiveExercise, type LiveSet } from "@/features/live/model";
+import { unlockAudio } from "@/features/live/signal";
+import { dispatch, loadPrevious, setLive, useLive } from "@/features/live/store";
+import { useNow } from "@/features/live/useNow";
 
 import { CellInput } from "./CellInput";
-import { ExerciseThumb } from "./ExerciseMedia";
-import { ExercisePicker } from "./ExercisePicker";
+import { ExerciseThumb } from "@/features/exercises/ExerciseMedia";
+import { ExercisePicker } from "@/features/exercises/ExercisePicker";
 import { FinishSheet } from "./FinishSheet";
-import { RecordBadge } from "./RecordBadge";
+import { RecordBadge } from "@/features/progress/RecordBadge";
 import { SetTypeMenu } from "./SetType";
 
 const rpeChoices = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];

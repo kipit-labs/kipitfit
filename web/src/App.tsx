@@ -8,8 +8,8 @@ import { Loading } from "@kipit-labs/kipitidy/loading";
 import { isLanguage, setLanguage } from "@/i18n";
 import { authQuery } from "@/lib/auth";
 
-import { AcceptInvite, Login, Setup } from "./routes/Auth";
-import { Layout } from "./routes/Layout";
+import { AcceptInvite, Login, Setup } from "./features/auth/Auth";
+import { Layout } from "./features/layout/Layout";
 
 /** Shows the sign-in screen the auth state calls for, else the app. */
 export function App() {

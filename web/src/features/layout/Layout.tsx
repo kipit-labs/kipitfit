@@ -9,11 +9,11 @@ import { cn } from "cn";
 import { useMe } from "@/lib/auth";
 import { routinesQuery } from "@/lib/routines";
 import { formatDuration } from "@/lib/units";
-import { elapsedS, type Live } from "@/live/model";
-import { flush, onFinishSaved, useLive } from "@/live/store";
-import { useNow } from "@/live/useNow";
+import { elapsedS, type Live } from "@/features/live/model";
+import { flush, onFinishSaved, useLive } from "@/features/live/store";
+import { useNow } from "@/features/live/useNow";
 
-import { RestBar } from "./RestBar";
+import { RestBar } from "@/features/live/RestBar";
 
 const tabs = [
   { to: "/feed", icon: Rss, label: "nav.feed" },

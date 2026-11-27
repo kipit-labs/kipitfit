@@ -1,4 +1,4 @@
-import type { LoggedSet, WorkoutBody } from "@/live/model";
+import type { LoggedSet, WorkoutBody } from "@/features/live/model";
 
 export class ApiError extends Error {
   readonly status: number;

@@ -28,9 +28,9 @@ import { defaultRestS, leaveSuperset, move, relabel, routinesQuery, supersetWith
 import { fieldsOf, setLabels, weightSign } from "@/lib/sets";
 import { formatDuration, formatKm, formatReps, formatWeight, parseDuration, parseKm, parseReps, parseWeight } from "@/lib/units";
 
-import { CellInput } from "./CellInput";
-import { ExercisePicker } from "./ExercisePicker";
-import { SetTypeMenu } from "./SetType";
+import { CellInput } from "@/features/live/CellInput";
+import { ExercisePicker } from "@/features/exercises/ExercisePicker";
+import { SetTypeMenu } from "@/features/live/SetType";
 
 type Item = RoutineExercise & { key: number; exercise: ExerciseSummary };
 type Draft = { name: string; notes: string; folderId?: string; exercises: Item[] };
