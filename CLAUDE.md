@@ -28,6 +28,6 @@ Design doc: `docs/design.md` — read before architectural changes. Roadmap in "
   the CSP stays `'self'`. Media off (no `KIPITFIT_S3_ENDPOINT`) must keep working with equipment icons.
 
 ## Commands
-`make dev-api` / `make dev-web` / `make test` / `make lint` / `make build` / `make docker`.
+`make dev-api` / `make dev-web` / `make test` / `make cover` / `make lint` / `make build` / `make docker`.
 `go:embed` needs `web/dist`; make targets stub it via `ui-stub`. Run oxlint with `--threads 1` if it runs out of
 memory.

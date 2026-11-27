@@ -15,6 +15,7 @@ import (
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/core"
 	"github.com/kipit-labs/kipitfit/internal/media"
+	"github.com/kipit-labs/kipitfit/internal/store"
 	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
 	"github.com/kipit-labs/kipitfit/web"
 )
@@ -75,20 +76,13 @@ func serve() error {
 	if m == nil {
 		log.Info("media off: no KIPITFIT_S3_ENDPOINT, exercises show equipment icons")
 	}
-	c := core.New(cfg, st, m, log)
-	if err := c.InitAuth(ctx); err != nil {
+	handler, _, err := wire(ctx, cfg, st, m, log)
+	if err != nil {
 		return err
 	}
-	if err := c.SyncExercises(ctx); err != nil {
-		return err
-	}
-
-	mux := http.NewServeMux()
-	mux.Handle("/api/", api.New(c, cfg, log))
-	mux.Handle("/", web.Handler())
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           api.RealIP(cfg.RealIPHeader, cfg.TrustedProxies)(api.SecureHeaders(mux, cfg.CookieSecure)),
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 		BaseContext:       func(net.Listener) context.Context { return ctx },
@@ -109,4 +103,20 @@ func serve() error {
 	shutdown, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdown)
+}
+
+// wire builds the app on an open store: core, the API and the web app behind
+// the real-IP and security-header middleware. m is nil when media is off.
+func wire(ctx context.Context, cfg config.Config, st store.Store, m media.Store, log *slog.Logger) (http.Handler, *core.Core, error) {
+	c := core.New(cfg, st, m, log)
+	if err := c.InitAuth(ctx); err != nil {
+		return nil, nil, err
+	}
+	if err := c.SyncExercises(ctx); err != nil {
+		return nil, nil, err
+	}
+	mux := http.NewServeMux()
+	mux.Handle("/api/", api.New(c, cfg, log))
+	mux.Handle("/", web.Handler())
+	return api.RealIP(cfg.RealIPHeader, cfg.TrustedProxies)(api.SecureHeaders(mux, cfg.CookieSecure)), c, nil
 }
