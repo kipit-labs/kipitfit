@@ -15,6 +15,7 @@ const ex = (name: string, more: Partial<ExerciseSummary> = {}): ExerciseSummary 
   primaryMuscles: ["chest"],
   secondaryMuscles: [],
   custom: false,
+  archived: false,
   ...more,
 });
 const labels: Record<string, string> = { "exercises.muscles.chest": "Pectoraux", "exercises.muscles.quadriceps": "Quadriceps" };

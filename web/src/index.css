@@ -15,3 +15,23 @@
   --primary-foreground: #16161a;
   --ring: #3dd6b0;
 }
+
+/* Set types on the set table: W warm-up, D drop set, F to failure. Darker in light mode so the letter stays readable
+   on its own tint. */
+:root {
+  --set-warmup: oklch(0.55 0.12 75);
+  --set-drop: oklch(0.5 0.2 295);
+  --set-failure: oklch(0.55 0.21 0);
+}
+
+.dark {
+  --set-warmup: oklch(0.85 0.15 90);
+  --set-drop: oklch(0.76 0.14 295);
+  --set-failure: oklch(0.76 0.16 0);
+}
+
+@theme inline {
+  --color-set-warmup: var(--set-warmup);
+  --color-set-drop: var(--set-drop);
+  --color-set-failure: var(--set-failure);
+}

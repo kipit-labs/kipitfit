@@ -68,6 +68,8 @@ export type ExerciseSummary = {
   secondaryMuscles: string[];
   /** The user's own exercise, which they can change; the rest is the shared library. */
   custom: boolean;
+  /** Deleted while a routine or workout used it: hidden from the library, kept where it's used. */
+  archived: boolean;
 };
 
 export type Exercise = ExerciseSummary & { level?: string; force?: string; mechanic?: string; instructions?: string[] };
@@ -75,6 +77,42 @@ export type Exercise = ExerciseSummary & { level?: string; force?: string; mecha
 export type ExerciseInput = Partial<
   Pick<Exercise, "name" | "kind" | "category" | "equipment" | "primaryMuscles" | "secondaryMuscles">
 >;
+
+export type SetType = "normal" | "warmup" | "drop" | "failure";
+
+/** A target set of a routine; each target is null when not set. */
+export type RoutineSet = {
+  type: SetType;
+  weightG?: number | null;
+  repsMin?: number | null;
+  repsMax?: number | null;
+  durationS?: number | null;
+  distanceM?: number | null;
+};
+
+export type RoutineExercise = {
+  exerciseId: string;
+  /** Group letter shared by the exercises of a superset. */
+  superset?: string;
+  /** Rest after each set in seconds; null for the app default, 0 for none. */
+  restS: number | null;
+  notes: string;
+  sets: RoutineSet[];
+  /** Filled in by the server. */
+  exercise?: ExerciseSummary;
+};
+
+export type Folder = { id: string; name: string };
+
+export type Routine = {
+  id: string;
+  folderId?: string;
+  name: string;
+  notes: string;
+  exercises: RoutineExercise[];
+};
+
+export type RoutineInput = Omit<Routine, "id">;
 
 export const api = {
   authState: () => request<AuthState>("/auth/state"),
@@ -91,4 +129,12 @@ export const api = {
   createExercise: (b: ExerciseInput) => send<Exercise>("POST", "/exercises", b),
   updateExercise: (id: string, b: ExerciseInput) => send<Exercise>("PATCH", `/exercises/${id}`, b),
   deleteExercise: (id: string) => send<void>("DELETE", `/exercises/${id}`),
+  routines: () => request<{ folders: Folder[]; routines: Routine[] }>("/routines"),
+  createRoutine: (b: RoutineInput) => send<Routine>("POST", "/routines", b),
+  updateRoutine: (id: string, b: RoutineInput) => send<Routine>("PUT", `/routines/${id}`, b),
+  deleteRoutine: (id: string) => send<void>("DELETE", `/routines/${id}`),
+  reorder: (b: { folders?: string[]; routines?: string[] }) => send<void>("PUT", "/routines/order", b),
+  createFolder: (name: string) => send<Folder>("POST", "/folders", { name }),
+  renameFolder: (id: string, name: string) => send<Folder>("PATCH", `/folders/${id}`, { name }),
+  deleteFolder: (id: string) => send<void>("DELETE", `/folders/${id}`),
 };

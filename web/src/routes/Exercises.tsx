@@ -70,28 +70,7 @@ export function Exercises() {
         />
       </div>
       <div className="sticky top-0 z-10 -mx-4 space-y-2 bg-background/95 px-4 pt-1 pb-3 backdrop-blur">
-        <InputGroup className="h-11">
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-          <InputGroupInput
-            type="search"
-            enterKeyHint="search"
-            // The app's own clear button replaces WebKit's built-in one.
-            className="[&::-webkit-search-cancel-button]:appearance-none"
-            aria-label={t("exercises.search")}
-            placeholder={t("exercises.search")}
-            value={filters.q}
-            onChange={(e) => set("q", e.target.value)}
-          />
-          {filters.q && (
-            <InputGroupAddon align="inline-end">
-              <InputGroupButton size="icon-xs" aria-label={t("exercises.clearSearch")} onClick={() => set("q", "")}>
-                <X />
-              </InputGroupButton>
-            </InputGroupAddon>
-          )}
-        </InputGroup>
+        <SearchField value={filters.q} onChange={(q) => set("q", q)} />
         <div className="grid grid-cols-3 gap-2">
           <Filter value={filters.muscle} onChange={(v) => set("muscle", v)} label={t("exercises.fields.muscle")} allLabel={t("exercises.allMuscles")}>
             {muscles.map((m) => ({ value: m, label: t(`exercises.muscles.${m}`) }))}
@@ -131,13 +110,44 @@ export function Exercises() {
           }
         />
       ) : (
-        <Rows key={key} exercises={shown} />
+        <Paged key={key} items={shown}>
+          {(e) => <Row key={e.id} exercise={e} />}
+        </Paged>
       )}
     </>
   );
 }
 
-function Filter({
+/** The library's search box, with its own clear button. */
+export function SearchField({ value, onChange }: { value: string; onChange: (q: string) => void }) {
+  const { t } = useTranslation();
+  return (
+    <InputGroup className="h-11">
+      <InputGroupAddon>
+        <Search />
+      </InputGroupAddon>
+      <InputGroupInput
+        type="search"
+        enterKeyHint="search"
+        // The app's own clear button replaces WebKit's built-in one.
+        className="[&::-webkit-search-cancel-button]:appearance-none"
+        aria-label={t("exercises.search")}
+        placeholder={t("exercises.search")}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {value && (
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton size="icon-xs" aria-label={t("exercises.clearSearch")} onClick={() => onChange("")}>
+            <X />
+          </InputGroupButton>
+        </InputGroupAddon>
+      )}
+    </InputGroup>
+  );
+}
+
+export function Filter({
   value,
   onChange,
   label,
@@ -173,11 +183,11 @@ function Filter({
   );
 }
 
-/** Renders the list a page at a time, so the whole library stays smooth on a phone. */
-function Rows({ exercises }: { exercises: ExerciseSummary[] }) {
+/** Renders a long list a page at a time, so the whole library stays smooth on a phone. */
+export function Paged<T>({ items, children }: { items: T[]; children: (item: T) => React.ReactNode }) {
   const [count, setCount] = useState(page);
   const end = useRef<HTMLLIElement>(null);
-  const more = count < exercises.length;
+  const more = count < items.length;
   useEffect(() => {
     if (!more || !end.current) return;
     const io = new IntersectionObserver(([e]) => e.isIntersecting && setCount((c) => c + page), {
@@ -188,9 +198,7 @@ function Rows({ exercises }: { exercises: ExerciseSummary[] }) {
   }, [more, count]);
   return (
     <ul className="divide-y">
-      {exercises.slice(0, count).map((e) => (
-        <Row key={e.id} exercise={e} />
-      ))}
+      {items.slice(0, count).map(children)}
       {more && <li ref={end} aria-hidden className="h-16" />}
     </ul>
   );
