@@ -1,4 +1,4 @@
-package core
+package library
 
 import (
 	"context"
@@ -8,12 +8,12 @@ import (
 )
 
 // MediaOn reports whether a media bucket is configured.
-func (c *Core) MediaOn() bool { return c.media != nil }
+func (s *Service) MediaOn() bool { return s.media != nil }
 
 // Media opens a pack picture; not found when media is off or key isn't one.
-func (c *Core) Media(ctx context.Context, key string) (io.ReadSeekCloser, domain.MediaInfo, error) {
-	if c.media == nil || !domain.ValidMediaKey(key) {
+func (s *Service) Media(ctx context.Context, key string) (io.ReadSeekCloser, domain.MediaInfo, error) {
+	if s.media == nil || !domain.ValidMediaKey(key) {
 		return nil, domain.MediaInfo{}, domain.ErrNotFound
 	}
-	return c.media.Get(ctx, key)
+	return s.media.Get(ctx, key)
 }

@@ -1,4 +1,4 @@
-package core
+package records
 
 import (
 	"context"
@@ -7,7 +7,18 @@ import (
 	"time"
 
 	"github.com/kipit-labs/kipitfit/internal/domain"
+	"github.com/kipit-labs/kipitfit/internal/usecase/exercises"
 )
+
+// Service works out records and exercise history from the logged sets.
+type Service struct {
+	workouts  domain.WorkoutRepository
+	exercises *exercises.Service
+}
+
+func NewService(workouts domain.WorkoutRepository, ex *exercises.Service) *Service {
+	return &Service{workouts: workouts, exercises: ex}
+}
 
 // RecordKind names a best an exercise can have. Values are grams, reps,
 // seconds or metres, as the kind says.
@@ -273,12 +284,12 @@ type ExerciseProgress struct {
 // ExerciseProgress works out me's records and history of an exercise, archived
 // ones included.
 // shortcut: replays every set of the exercise on each call (ms for years of training); keep a records table if it shows.
-func (c *Core) ExerciseProgress(ctx context.Context, me domain.User, id string) (ExerciseProgress, error) {
-	e, err := c.GetExercise(ctx, me, id)
+func (s *Service) ExerciseProgress(ctx context.Context, me domain.User, id string) (ExerciseProgress, error) {
+	e, err := s.exercises.GetExercise(ctx, me, id)
 	if err != nil {
 		return ExerciseProgress{}, err
 	}
-	rows, err := c.store.ExerciseSets(ctx, me.ID, []string{id})
+	rows, err := s.workouts.ExerciseSets(ctx, me.ID, []string{id})
 	if err != nil {
 		return ExerciseProgress{}, err
 	}
@@ -292,11 +303,11 @@ func (c *Core) ExerciseProgress(ctx context.Context, me domain.User, id string) 
 
 // Bests returns me's current best of each record kind per exercise, for the
 // phone to spot records while logging; exercises never done are left out.
-func (c *Core) Bests(ctx context.Context, me domain.User, exerciseIDs []string) (map[string]map[RecordKind]int, error) {
-	if len(exerciseIDs) > maxExercises {
-		return nil, fmt.Errorf("%w: at most %d exercises", domain.ErrInvalid, maxExercises)
+func (s *Service) Bests(ctx context.Context, me domain.User, exerciseIDs []string) (map[string]map[RecordKind]int, error) {
+	if len(exerciseIDs) > domain.MaxExercises {
+		return nil, fmt.Errorf("%w: at most %d exercises", domain.ErrInvalid, domain.MaxExercises)
 	}
-	h, err := c.histories(ctx, me, exerciseIDs)
+	h, err := s.histories(ctx, me, exerciseIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -314,14 +325,14 @@ func (c *Core) Bests(ctx context.Context, me domain.User, exerciseIDs []string) 
 }
 
 // histories analyses each of the exercises me can see; unknown ones are skipped.
-func (c *Core) histories(ctx context.Context, me domain.User, exerciseIDs []string) (map[string]history, error) {
-	rows, err := c.store.ExerciseSets(ctx, me.ID, exerciseIDs)
+func (s *Service) histories(ctx context.Context, me domain.User, exerciseIDs []string) (map[string]history, error) {
+	rows, err := s.workouts.ExerciseSets(ctx, me.ID, exerciseIDs)
 	if err != nil {
 		return nil, err
 	}
 	out := map[string]history{}
 	for id, rs := range byExercise(rows) {
-		e, err := c.store.GetExercise(ctx, id)
+		e, err := s.exercises.GetExercise(ctx, me, id)
 		if err != nil {
 			return nil, err
 		}
@@ -336,8 +347,8 @@ type WorkoutView struct {
 	Records []Record `json:"records"`
 }
 
-// withRecords adds to each workout the records it beat.
-func (c *Core) withRecords(ctx context.Context, me domain.User, ws []domain.Workout) ([]WorkoutView, error) {
+// WithRecords adds to each workout the records it beat.
+func (s *Service) WithRecords(ctx context.Context, me domain.User, ws []domain.Workout) ([]WorkoutView, error) {
 	var exIDs []string
 	for _, w := range ws {
 		for _, we := range w.Exercises {
@@ -346,7 +357,7 @@ func (c *Core) withRecords(ctx context.Context, me domain.User, ws []domain.Work
 			}
 		}
 	}
-	h, err := c.histories(ctx, me, exIDs)
+	h, err := s.histories(ctx, me, exIDs)
 	if err != nil {
 		return nil, err
 	}

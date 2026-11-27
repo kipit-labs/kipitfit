@@ -1,4 +1,4 @@
-package core
+package auth
 
 import (
 	"context"
@@ -20,7 +20,7 @@ type Profile struct {
 	Unit     *domain.Unit `json:"unit"`
 }
 
-func (c *Core) UpdateMe(ctx context.Context, me domain.User, p Profile) (domain.User, error) {
+func (s *Service) UpdateMe(ctx context.Context, me domain.User, p Profile) (domain.User, error) {
 	if p.Name != nil {
 		me.Name = strings.TrimSpace(*p.Name)
 		if utf8.RuneCountInString(me.Name) > maxNameLength {
@@ -39,7 +39,7 @@ func (c *Core) UpdateMe(ctx context.Context, me domain.User, p Profile) (domain.
 		}
 		me.Unit = *p.Unit
 	}
-	return me, c.store.UpdateUser(ctx, me)
+	return me, s.users.UpdateUser(ctx, me)
 }
 
 // InviteLink is a new invite with the link to hand to the person; the link
@@ -49,7 +49,7 @@ type InviteLink struct {
 	Link string `json:"link"`
 }
 
-func (c *Core) CreateInvite(ctx context.Context, me domain.User, email string) (InviteLink, error) {
+func (s *Service) CreateInvite(ctx context.Context, me domain.User, email string) (InviteLink, error) {
 	if !me.IsAdmin {
 		return InviteLink{}, ErrNotAdmin
 	}
@@ -57,13 +57,13 @@ func (c *Core) CreateInvite(ctx context.Context, me domain.User, email string) (
 	if err != nil {
 		return InviteLink{}, err
 	}
-	if _, err := c.store.GetUserByEmail(ctx, email); err == nil {
+	if _, err := s.users.GetUserByEmail(ctx, email); err == nil {
 		return InviteLink{}, ErrEmailTaken
 	} else if !errors.Is(err, domain.ErrNotFound) {
 		return InviteLink{}, err
 	}
 	token := randomToken(32)
-	i, err := c.store.CreateInvite(ctx, domain.Invite{
+	i, err := s.users.CreateInvite(ctx, domain.Invite{
 		TokenHash: hashToken(token),
 		Email:     email,
 		CreatedBy: me.ID,
@@ -72,30 +72,30 @@ func (c *Core) CreateInvite(ctx context.Context, me domain.User, email string) (
 	if err != nil {
 		return InviteLink{}, err
 	}
-	return InviteLink{Invite: i, Link: c.cfg.AppURL + "/invite?token=" + url.QueryEscape(token)}, nil
+	return InviteLink{Invite: i, Link: s.appURL + "/invite?token=" + url.QueryEscape(token)}, nil
 }
 
-func (c *Core) ListInvites(ctx context.Context, me domain.User) ([]domain.Invite, error) {
+func (s *Service) ListInvites(ctx context.Context, me domain.User) ([]domain.Invite, error) {
 	if !me.IsAdmin {
 		return nil, ErrNotAdmin
 	}
-	return c.store.ListInvites(ctx)
+	return s.users.ListInvites(ctx)
 }
 
-func (c *Core) DeleteInvite(ctx context.Context, me domain.User, id string) error {
+func (s *Service) DeleteInvite(ctx context.Context, me domain.User, id string) error {
 	if !me.IsAdmin {
 		return ErrNotAdmin
 	}
-	return c.store.DeleteInvite(ctx, id)
+	return s.users.DeleteInvite(ctx, id)
 }
 
 // AcceptInvite creates the invited account and returns it with a session token.
-func (c *Core) AcceptInvite(ctx context.Context, token, name, password string) (domain.User, string, error) {
-	u, err := c.newUser("", name, password)
+func (s *Service) AcceptInvite(ctx context.Context, token, name, password string) (domain.User, string, error) {
+	u, err := s.newUser("", name, password)
 	if err != nil {
 		return domain.User{}, "", err
 	}
-	u, err = c.store.AcceptInvite(ctx, hashToken(token), u)
+	u, err = s.users.AcceptInvite(ctx, hashToken(token), u)
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		return domain.User{}, "", ErrInvalidInvite
@@ -104,6 +104,6 @@ func (c *Core) AcceptInvite(ctx context.Context, token, name, password string) (
 	case err != nil:
 		return domain.User{}, "", err
 	}
-	session, err := c.newSession(ctx, u.ID)
+	session, err := s.newSession(ctx, u.ID)
 	return u, session, err
 }

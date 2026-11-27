@@ -1,4 +1,4 @@
-package core
+package auth
 
 import (
 	"context"
@@ -8,13 +8,40 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"net/mail"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
 	"github.com/kipit-labs/kipitfit/internal/domain"
 )
+
+// Service signs people up and in: the first admin, invites, sessions, and
+// each user's own settings.
+type Service struct {
+	users           domain.UserRepository
+	hasher          domain.PasswordHasher
+	configuredToken string
+	appURL          string
+	log             *slog.Logger
+	// dummyHash keeps login timing the same whether or not the user exists.
+	dummyHash func() string
+
+	setupMu    sync.Mutex
+	setupToken string
+}
+
+// NewService builds the service. setupToken replaces the random token the
+// first admin needs when set; appURL starts invite links.
+func NewService(users domain.UserRepository, hasher domain.PasswordHasher, setupToken, appURL string, log *slog.Logger) *Service {
+	return &Service{users: users, hasher: hasher, configuredToken: setupToken, appURL: appURL, log: log,
+		dummyHash: sync.OnceValue(func() string {
+			hash, _ := hasher.Hash("kipitfit-dummy-password")
+			return hash
+		})}
+}
 
 const (
 	SessionTTL        = 30 * 24 * time.Hour
@@ -32,31 +59,31 @@ type AuthState struct {
 // InitAuth creates the one-time token required to create the first admin,
 // so whoever reaches a fresh instance first can't claim it without access to
 // the server logs.
-func (c *Core) InitAuth(ctx context.Context) error {
-	n, err := c.store.CountUsers(ctx)
+func (s *Service) InitAuth(ctx context.Context) error {
+	n, err := s.users.CountUsers(ctx)
 	if err != nil || n > 0 {
 		return err
 	}
-	token := c.cfg.SetupToken
+	token := s.configuredToken
 	if token == "" {
 		token = randomToken(16)
 	}
-	c.setupMu.Lock()
-	c.setupToken = token
-	c.setupMu.Unlock()
-	c.log.Warn("no admin account yet: open the app and use this setup token", "setup_token", token)
+	s.setupMu.Lock()
+	s.setupToken = token
+	s.setupMu.Unlock()
+	s.log.Warn("no admin account yet: open the app and use this setup token", "setup_token", token)
 	return nil
 }
 
-func (c *Core) AuthState(ctx context.Context, sessionToken string) (AuthState, error) {
-	n, err := c.store.CountUsers(ctx)
+func (s *Service) AuthState(ctx context.Context, sessionToken string) (AuthState, error) {
+	n, err := s.users.CountUsers(ctx)
 	if err != nil {
 		return AuthState{}, err
 	}
 	if n == 0 {
 		return AuthState{SetupRequired: true}, nil
 	}
-	u, err := c.Authenticate(ctx, sessionToken)
+	u, err := s.Authenticate(ctx, sessionToken)
 	if errors.Is(err, domain.ErrUnauthorized) {
 		return AuthState{}, nil
 	}
@@ -67,82 +94,82 @@ func (c *Core) AuthState(ctx context.Context, sessionToken string) (AuthState, e
 }
 
 // Setup creates the first admin account and returns a session token.
-func (c *Core) Setup(ctx context.Context, setupToken, email, name, password string) (domain.User, string, error) {
-	c.setupMu.Lock()
-	defer c.setupMu.Unlock()
+func (s *Service) Setup(ctx context.Context, setupToken, email, name, password string) (domain.User, string, error) {
+	s.setupMu.Lock()
+	defer s.setupMu.Unlock()
 
-	if n, err := c.store.CountUsers(ctx); err != nil {
+	if n, err := s.users.CountUsers(ctx); err != nil {
 		return domain.User{}, "", err
 	} else if n > 0 {
 		return domain.User{}, "", ErrSetupDone
 	}
-	if c.setupToken == "" || subtle.ConstantTimeCompare([]byte(strings.TrimSpace(setupToken)), []byte(c.setupToken)) != 1 {
+	if s.setupToken == "" || subtle.ConstantTimeCompare([]byte(strings.TrimSpace(setupToken)), []byte(s.setupToken)) != 1 {
 		return domain.User{}, "", ErrWrongSetupToken
 	}
 	email, err := normalizeEmail(email)
 	if err != nil {
 		return domain.User{}, "", err
 	}
-	u, err := c.newUser(email, name, password)
+	u, err := s.newUser(email, name, password)
 	if err != nil {
 		return domain.User{}, "", err
 	}
 	u.IsAdmin = true
-	if u, err = c.store.CreateUser(ctx, u); err != nil {
+	if u, err = s.users.CreateUser(ctx, u); err != nil {
 		return domain.User{}, "", err
 	}
-	c.setupToken = ""
-	token, err := c.newSession(ctx, u.ID)
+	s.setupToken = ""
+	token, err := s.newSession(ctx, u.ID)
 	return u, token, err
 }
 
 // Login checks an email and password and returns the user and a new session token.
-func (c *Core) Login(ctx context.Context, email, password string) (domain.User, string, error) {
-	u, err := c.store.GetUserByEmail(ctx, strings.ToLower(strings.TrimSpace(email)))
+func (s *Service) Login(ctx context.Context, email, password string) (domain.User, string, error) {
+	u, err := s.users.GetUserByEmail(ctx, strings.ToLower(strings.TrimSpace(email)))
 	if errors.Is(err, domain.ErrNotFound) {
-		_ = c.hasher.Compare(c.dummyHash(), password)
+		_ = s.hasher.Compare(s.dummyHash(), password)
 		return domain.User{}, "", ErrWrongCredentials
 	}
 	if err != nil {
 		return domain.User{}, "", err
 	}
-	if c.hasher.Compare(u.PasswordHash, password) != nil {
+	if s.hasher.Compare(u.PasswordHash, password) != nil {
 		return domain.User{}, "", ErrWrongCredentials
 	}
-	_ = c.store.DeleteExpiredSessions(ctx)
-	token, err := c.newSession(ctx, u.ID)
+	_ = s.users.DeleteExpiredSessions(ctx)
+	token, err := s.newSession(ctx, u.ID)
 	return u, token, err
 }
 
 // Authenticate returns the user a session token belongs to.
-func (c *Core) Authenticate(ctx context.Context, sessionToken string) (domain.User, error) {
+func (s *Service) Authenticate(ctx context.Context, sessionToken string) (domain.User, error) {
 	if sessionToken == "" {
 		return domain.User{}, ErrSignedOut
 	}
-	sess, err := c.store.GetSession(ctx, hashToken(sessionToken))
+	sess, err := s.users.GetSession(ctx, hashToken(sessionToken))
 	if errors.Is(err, domain.ErrNotFound) {
 		return domain.User{}, ErrSignedOut
 	}
 	if err != nil {
 		return domain.User{}, err
 	}
-	u, err := c.store.GetUser(ctx, sess.UserID)
+	u, err := s.users.GetUser(ctx, sess.UserID)
 	if errors.Is(err, domain.ErrNotFound) {
 		return domain.User{}, ErrSignedOut
 	}
 	return u, err
 }
 
-func (c *Core) Logout(ctx context.Context, sessionToken string) error {
+func (s *Service) Logout(ctx context.Context, sessionToken string) error {
 	if sessionToken == "" {
 		return nil
 	}
-	return c.store.DeleteSession(ctx, hashToken(sessionToken))
+	return s.users.DeleteSession(ctx, hashToken(sessionToken))
 }
 
-func (c *Core) newSession(ctx context.Context, userID string) (string, error) {
+func (s *Service) newSession(ctx context.Context, userID string) (string, error) {
 	token := randomToken(32)
-	err := c.store.CreateSession(ctx, domain.Session{
+	err := s.users.CreateSession(ctx, domain.Session{
 		TokenHash: hashToken(token),
 		UserID:    userID,
 		ExpiresAt: time.Now().Add(SessionTTL),
@@ -151,7 +178,7 @@ func (c *Core) newSession(ctx context.Context, userID string) (string, error) {
 }
 
 // newUser checks name and password and hashes the password.
-func (c *Core) newUser(email, name, password string) (domain.User, error) {
+func (s *Service) newUser(email, name, password string) (domain.User, error) {
 	name = strings.TrimSpace(name)
 	if utf8.RuneCountInString(name) > maxNameLength {
 		return domain.User{}, ErrNameTooLong
@@ -159,7 +186,7 @@ func (c *Core) newUser(email, name, password string) (domain.User, error) {
 	if err := validatePassword(password); err != nil {
 		return domain.User{}, err
 	}
-	hash, err := c.hasher.Hash(password)
+	hash, err := s.hasher.Hash(password)
 	if err != nil {
 		return domain.User{}, err
 	}

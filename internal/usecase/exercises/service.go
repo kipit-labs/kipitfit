@@ -1,11 +1,10 @@
-package core
+package exercises
 
 import (
 	"context"
 	"errors"
 	"slices"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/kipit-labs/kipitfit/internal/domain"
@@ -23,40 +22,24 @@ var (
 
 func init() { ErrExerciseName.Params = map[string]any{"max": maxExerciseName} }
 
-// SyncExercises brings the library in line with the embedded dataset; a
-// no-op when it already is, or when a pack replaced it.
-func (c *Core) SyncExercises(ctx context.Context) error {
-	// An imported pack replaced the built-in library: don't bring it back.
-	if p, err := c.store.LibraryPack(ctx); err == nil {
-		c.log.Info("exercise library from a pack", "pack", p.Name, "version", p.Version)
-		return nil
-	} else if !errors.Is(err, domain.ErrNotFound) {
-		return err
-	}
-	start := time.Now()
-	exs, err := c.dataset.Load()
-	if err != nil {
-		return err
-	}
-	wrote, err := c.store.SyncLibrary(ctx, c.dataset.Version(), exs)
-	if err != nil {
-		return err
-	}
-	if wrote {
-		c.log.Info("exercise library synced", "exercises", len(exs), "version", c.dataset.Version(), "took", time.Since(start))
-	}
-	return nil
+// Service runs the exercise list: the library, and each user's own exercises.
+type Service struct {
+	repo domain.ExerciseRepository
+}
+
+func NewService(repo domain.ExerciseRepository) *Service {
+	return &Service{repo: repo}
 }
 
 // ListExercises returns the library and me's custom exercises, compact.
-func (c *Core) ListExercises(ctx context.Context, me domain.User) ([]domain.Exercise, error) {
-	return c.store.ListExercises(ctx, me.ID)
+func (s *Service) ListExercises(ctx context.Context, me domain.User) ([]domain.Exercise, error) {
+	return s.repo.ListExercises(ctx, me.ID)
 }
 
 // GetExercise returns a library exercise or one of me's; someone else's is
 // not found.
-func (c *Core) GetExercise(ctx context.Context, me domain.User, id string) (domain.Exercise, error) {
-	e, err := c.store.GetExercise(ctx, id)
+func (s *Service) GetExercise(ctx context.Context, me domain.User, id string) (domain.Exercise, error) {
+	e, err := s.repo.GetExercise(ctx, id)
 	if err != nil {
 		return domain.Exercise{}, err
 	}
@@ -77,7 +60,7 @@ type ExerciseInput struct {
 	SecondaryMuscles *[]string    `json:"secondaryMuscles"`
 }
 
-func (c *Core) CreateExercise(ctx context.Context, me domain.User, in ExerciseInput) (domain.Exercise, error) {
+func (s *Service) CreateExercise(ctx context.Context, me domain.User, in ExerciseInput) (domain.Exercise, error) {
 	e := domain.Exercise{OwnerID: me.ID, Category: "strength", Equipment: "none", SecondaryMuscles: []string{}}
 	if err := apply(&e, in); err != nil {
 		return domain.Exercise{}, err
@@ -88,32 +71,32 @@ func (c *Core) CreateExercise(ctx context.Context, me domain.User, in ExerciseIn
 	if in.Kind == nil {
 		return domain.Exercise{}, ErrExerciseField
 	}
-	e, err := c.store.CreateExercise(ctx, e)
+	e, err := s.repo.CreateExercise(ctx, e)
 	return e, nameTaken(err)
 }
 
-func (c *Core) UpdateExercise(ctx context.Context, me domain.User, id string, in ExerciseInput) (domain.Exercise, error) {
-	e, err := c.ownExercise(ctx, me, id)
+func (s *Service) UpdateExercise(ctx context.Context, me domain.User, id string, in ExerciseInput) (domain.Exercise, error) {
+	e, err := s.ownExercise(ctx, me, id)
 	if err != nil {
 		return domain.Exercise{}, err
 	}
 	if err := apply(&e, in); err != nil {
 		return domain.Exercise{}, err
 	}
-	e, err = c.store.UpdateExercise(ctx, e)
+	e, err = s.repo.UpdateExercise(ctx, e)
 	return e, nameTaken(err)
 }
 
-func (c *Core) DeleteExercise(ctx context.Context, me domain.User, id string) error {
-	if _, err := c.ownExercise(ctx, me, id); err != nil {
+func (s *Service) DeleteExercise(ctx context.Context, me domain.User, id string) error {
+	if _, err := s.ownExercise(ctx, me, id); err != nil {
 		return err
 	}
-	return c.store.DeleteExercise(ctx, id)
+	return s.repo.DeleteExercise(ctx, id)
 }
 
 // ownExercise is me's custom exercise id, for a change.
-func (c *Core) ownExercise(ctx context.Context, me domain.User, id string) (domain.Exercise, error) {
-	e, err := c.GetExercise(ctx, me, id)
+func (s *Service) ownExercise(ctx context.Context, me domain.User, id string) (domain.Exercise, error) {
+	e, err := s.GetExercise(ctx, me, id)
 	if err != nil {
 		return domain.Exercise{}, err
 	}

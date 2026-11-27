@@ -1,4 +1,4 @@
-package core
+package exercises
 
 import (
 	"context"
@@ -8,29 +8,13 @@ import (
 	"github.com/kipit-labs/kipitfit/internal/domain"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 func TestExercises(t *testing.T) {
 	ctx := context.Background()
-	c, _ := newCore(t)
-	if err := c.SyncExercises(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if err := c.SyncExercises(ctx); err != nil { // second start: no-op
-		t.Fatal(err)
-	}
-	admin := newAdmin(t, c)
-	link, err := c.CreateInvite(ctx, admin, "friend@example.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	friend, _, err := c.AcceptInvite(ctx, inviteToken(t, link.Link), "Friend", pw)
-	if err != nil {
-		t.Fatal(err)
-	}
+	c := NewService(newFakeExercises("Bench Press", "Deadlift", "Squat"))
+	admin, friend := domain.User{ID: "admin"}, domain.User{ID: "friend"}
 
 	library, err := c.ListExercises(ctx, admin)
-	if err != nil || len(library) != 876 {
+	if err != nil || len(library) != 3 {
 		t.Fatalf("library: %d, %v", len(library), err)
 	}
 
@@ -81,7 +65,7 @@ func TestExercises(t *testing.T) {
 	if err := c.DeleteExercise(ctx, admin, library[0].ID); !errors.Is(err, ErrLibraryReadonly) {
 		t.Errorf("library delete: %v", err)
 	}
-	if list, _ := c.ListExercises(ctx, friend); len(list) != 876 {
+	if list, _ := c.ListExercises(ctx, friend); len(list) != 3 {
 		t.Errorf("friend sees %d, want the library only", len(list))
 	}
 
