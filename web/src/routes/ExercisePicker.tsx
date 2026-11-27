@@ -4,13 +4,13 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "cn";
 import { Button } from "@kipit-labs/kipitidy/button";
-import { IconTile } from "@kipit-labs/kipitidy/icon-tile";
 import { Loading } from "@kipit-labs/kipitidy/loading";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@kipit-labs/kipitidy/sheet";
 
 import type { ExerciseSummary } from "@/lib/api";
-import { equipment, equipmentIcon, exercisesQuery, filterExercises, muscles } from "@/lib/exercises";
+import { equipment, exercisesQuery, filterExercises, muscles } from "@/lib/exercises";
 
+import { ExerciseThumb } from "./ExerciseMedia";
 import { Filter, Paged, SearchField } from "./Exercises";
 
 /**
@@ -97,7 +97,7 @@ function Picker({ single, onPick }: { single?: boolean; onPick: (exercises: Exer
                     onClick={() => toggle(e)}
                     className="flex w-full items-center gap-3 py-2.5 text-left"
                   >
-                    <IconTile icon={equipmentIcon(e.equipment)} />
+                    <ExerciseThumb exercise={e} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{e.name}</span>
                       <span className="block truncate text-xs text-muted-foreground">

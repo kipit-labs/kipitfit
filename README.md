@@ -74,6 +74,26 @@ Environment variables, all optional:
 | `KIPITFIT_SETUP_TOKEN` | random | Token required to create the first admin, instead of the one printed in the logs. |
 | `KIPITFIT_REAL_IP_HEADER` | none | Header a reverse proxy puts the client IP in (`CF-Connecting-IP`, `X-Forwarded-For`). Needs `KIPITFIT_TRUSTED_PROXIES`. |
 | `KIPITFIT_TRUSTED_PROXIES` | none | Comma-separated CIDRs or IPs allowed to set that header, e.g. the cluster's pod network. |
+| `KIPITFIT_S3_ENDPOINT` | none | S3-compatible endpoint for exercise pictures, e.g. `http://rustfs:9000`. Without it, media is off: equipment icons. |
+| `KIPITFIT_S3_BUCKET` | `kipitfit` | Bucket, created beforehand. Keep it private: the app streams from it. |
+| `KIPITFIT_S3_ACCESS_KEY_ID`, `KIPITFIT_S3_SECRET_ACCESS_KEY` | none | Credentials with read and write on the bucket. |
+| `KIPITFIT_S3_REGION` | `us-east-1` | RustFS and MinIO take any; R2 wants `auto`. |
+
+## Exercise pictures
+
+kipitfit ships no exercise pictures: the good ones are licensed and can't be republished. Each deployment imports its
+own **pack**, which uploads the pictures to your bucket and becomes the exercise library:
+
+```sh
+kipitfit pack import repdb-free                      # RepDB's free tier, downloaded from repdb.co
+kipitfit pack import --sha256 <hex> repdb-free ./repdb-free.zip   # or a copy you keep
+```
+
+In a container, run it in the app's own: `docker compose exec kipitfit /kipitfit pack import repdb-free` (or
+`kubectl exec deploy/kipitfit -- /kipitfit pack import repdb-free`). It prints the ZIP's SHA-256; running it again
+skips the pictures already uploaded. Routines and workouts keep their history: each moves to the pack exercise with the
+same name and kind, the old library is archived. Respect the pack's licence: RepDB's free tier asks for the credit
+"Exercise data by RepDB (repdb.co)", which kipitfit shows on **Me → About**.
 
 ## API
 
@@ -112,6 +132,8 @@ Errors answer `{"error": "...", "code": "...", "params": {...}}`; the app shows 
 | GET | `/api/workouts/{id}` | session | One workout with its exercises and sets. |
 | DELETE | `/api/workouts/{id}` | session | Deletes a workout. |
 | GET | `/api/previous?exercise=a,b,c` | session | `{exerciseId: sets}`: each exercise's sets in your latest workout that has it (at most 50 exercises). |
+| GET | `/api/library` | session | `{pack, media}`: the imported pack (`name`, `version`, `credit`, `creditUrl`), `null` for the built-in library; whether a media bucket is set. |
+| GET | `/api/media/{key}` | session | A pack picture from the bucket (`media` keys of an exercise), cached for a year. |
 
 Passwords: 10 characters minimum, 72 bytes maximum (bcrypt).
 
@@ -122,5 +144,6 @@ Passwords: 10 characters minimum, 72 bytes maximum (bcrypt).
 
 ## License
 
-MIT. The exercise library comes from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas
-(Unlicense); see [internal/exercisedb/NOTICE.md](internal/exercisedb/NOTICE.md).
+MIT. The built-in exercise library comes from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by
+yuhonas (Unlicense); see [internal/exercisedb/NOTICE.md](internal/exercisedb/NOTICE.md). Imported packs keep their own
+licences.

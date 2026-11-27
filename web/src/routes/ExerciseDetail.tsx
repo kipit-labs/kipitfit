@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Pencil, SearchX, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ import { errorMessage } from "@/lib/errors";
 import { equipmentIcon, exercisesQuery } from "@/lib/exercises";
 
 import { ExerciseForm } from "./ExerciseForm";
+import { ExerciseFrames } from "./ExerciseMedia";
 import { chip } from "./Exercises";
 import { PageTitle } from "./Layout";
 
@@ -47,7 +49,7 @@ export function ExerciseDetail() {
       ) : ex.isError ? (
         <EmptyState icon={SearchX} title={errorMessage(ex.error)} />
       ) : (
-        <Details exercise={ex.data} />
+        <Details key={ex.data.id} exercise={ex.data} />
       )}
     </>
   );
@@ -55,6 +57,7 @@ export function ExerciseDetail() {
 
 function Details({ exercise: e }: { exercise: Exercise }) {
   const { t } = useTranslation();
+  const [noFrames, setNoFrames] = useState(!e.media?.length);
   const facts = [
     [t("exercises.fields.kind"), t(`exercises.kinds.${e.kind}`)],
     [t("exercises.fields.category"), t(`exercises.categories.${e.category}`)],
@@ -63,8 +66,9 @@ function Details({ exercise: e }: { exercise: Exercise }) {
   ];
   return (
     <div className="space-y-4">
+      <ExerciseFrames exercise={e} onFail={() => setNoFrames(true)} />
       <div className="flex items-start gap-3">
-        <IconTile icon={equipmentIcon(e.equipment)} className="mt-0.5" />
+        {noFrames && <IconTile icon={equipmentIcon(e.equipment)} className="mt-0.5" />}
         <div className="min-w-0 flex-1">
           <PageTitle className="mb-1">{e.name}</PageTitle>
           {e.custom && <span className={`${chip} bg-primary/10 text-primary`}>{t("exercises.custom")}</span>}

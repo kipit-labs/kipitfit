@@ -72,6 +72,14 @@ export type ExerciseSummary = {
   custom: boolean;
   /** Deleted while a routine or workout used it: hidden from the library, kept where it's used. */
   archived: boolean;
+  /** Bucket keys of a pack exercise's frames (start, peak), served under /api/media; missing in older saved workouts. */
+  media?: string[];
+};
+
+/** Where the exercise library came from, and the credit its licence asks for. */
+export type Library = {
+  pack: { name: string; version: string; credit: string; creditUrl: string } | null;
+  media: boolean;
 };
 
 export type Exercise = ExerciseSummary & { level?: string; force?: string; mechanic?: string; instructions?: string[] };
@@ -129,6 +137,7 @@ export const api = {
   createInvite: (email: string) => send<Invite & { link: string }>("POST", "/admin/invites", { email }),
   deleteInvite: (id: string) => send<void>("DELETE", `/admin/invites/${id}`),
   exercises: () => request<ExerciseSummary[]>("/exercises"),
+  library: () => request<Library>("/library"),
   exercise: (id: string) => request<Exercise>(`/exercises/${id}`),
   createExercise: (b: ExerciseInput) => send<Exercise>("POST", "/exercises", b),
   updateExercise: (id: string, b: ExerciseInput) => send<Exercise>("PATCH", `/exercises/${id}`, b),

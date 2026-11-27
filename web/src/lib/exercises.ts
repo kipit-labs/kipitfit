@@ -72,6 +72,8 @@ const icons: Record<string, LucideIcon> = {
 export const equipment = Object.keys(icons).concat("other");
 export const equipmentIcon = (e: string): LucideIcon => icons[e] ?? Shapes;
 
+export const mediaUrl = (key: string) => `/api/media/${key}`;
+
 export const exercisesQuery = { queryKey: ["exercises"], queryFn: api.exercises, staleTime: 5 * 60_000 };
 
 /** Lower case without accents, so "écarté" matches "ecarte". */
