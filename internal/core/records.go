@@ -155,7 +155,7 @@ type history struct {
 // the record, the earliest on a tie.
 func analyze(k store.Kind, rows []store.LoggedSet) history {
 	kinds := RecordKinds(k)
-	h := history{bests: map[RecordKind]Record{}}
+	h := history{bests: map[RecordKind]Record{}, reps: []RepRecord{}}
 	for start := 0; start < len(rows); {
 		end := start
 		for end < len(rows) && rows[end].WorkoutID == rows[start].WorkoutID {
