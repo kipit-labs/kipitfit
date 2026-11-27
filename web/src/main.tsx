@@ -15,6 +15,7 @@ import { errorMessage } from "./lib/errors";
 import { ExerciseDetail } from "./routes/ExerciseDetail";
 import { Exercises } from "./routes/Exercises";
 import { Me } from "./routes/Me";
+import { Live } from "./routes/Live";
 import { Feed, Progress } from "./routes/Placeholders";
 import { RoutineEditor } from "./routes/RoutineEditor";
 import { Workout } from "./routes/Workout";
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/workout" replace /> },
       { path: "feed", element: <Feed /> },
       { path: "workout", element: <Workout /> },
+      { path: "live", element: <Live /> },
       { path: "routines/new", element: <RoutineEditor /> },
       { path: "routines/:id", element: <RoutineEditor /> },
       { path: "exercises", element: <Exercises /> },

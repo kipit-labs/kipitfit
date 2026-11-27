@@ -5,6 +5,8 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  CloudAlert,
+  CloudOff,
   FolderPlus,
   Library,
   MoreVertical,
@@ -31,15 +33,20 @@ import {
 import { EmptyState } from "@kipit-labs/kipitidy/empty-state";
 import { IconTile } from "@kipit-labs/kipitidy/icon-tile";
 import { Loading } from "@kipit-labs/kipitidy/loading";
+import { Spinner } from "@kipit-labs/kipitidy/spinner";
 
-import { api, type Folder, type Routine } from "@/lib/api";
+import { api, ApiError, type Folder, type Routine } from "@/lib/api";
+import { useMe } from "@/lib/auth";
 import { errorMessage } from "@/lib/errors";
 import { move, routinesQuery } from "@/lib/routines";
+import { discardFinish, retryFinish, useOutbox } from "@/live/store";
 
 import { PageTitle } from "./Layout";
 import { NameDialog } from "./NameDialog";
+import { useStartWorkout } from "./StartWorkout";
 
 type Data = { folders: Folder[]; routines: Routine[] };
+type Start = (routine?: Routine) => void;
 
 /** The Workout tab: start a workout, the routines in their folders, the library. */
 export function Workout() {
@@ -47,6 +54,7 @@ export function Workout() {
   const list = useQuery(routinesQuery);
   const [naming, setNaming] = useState(false);
   const order = useOrder();
+  const [begin, startDialog] = useStartWorkout();
   const createFolder = useMutation({
     meta: { error: t("routines.folderSaveFailed") },
     mutationFn: api.createFolder,
@@ -60,11 +68,12 @@ export function Workout() {
   return (
     <>
       <PageTitle>{t("nav.workout")}</PageTitle>
-      {/* Wired with the live workout. */}
-      <Button size="lg" className="w-full" disabled>
+      <Outbox />
+      <Button size="lg" className="w-full" onClick={() => begin()}>
         <Play data-icon="inline-start" />
         {t("workout.startEmpty")}
       </Button>
+      {startDialog}
 
       <div className="mt-8 mb-3 flex items-center justify-between gap-2">
         <h2 className="font-heading text-lg font-semibold">{t("routines.title")}</h2>
@@ -102,10 +111,10 @@ export function Workout() {
       ) : (
         <div className="space-y-3">
           {loose.map((r) => (
-            <RoutineCard key={r.id} routine={r} data={data!} order={order} />
+            <RoutineCard key={r.id} routine={r} data={data!} order={order} begin={begin} />
           ))}
           {data!.folders.map((f, i) => (
-            <FolderGroup key={f.id} folder={f} index={i} data={data!} order={order} />
+            <FolderGroup key={f.id} folder={f} index={i} data={data!} order={order} begin={begin} />
           ))}
         </div>
       )}
@@ -155,7 +164,19 @@ function useOrder() {
 
 type Order = ReturnType<typeof useOrder>;
 
-function FolderGroup({ folder: f, index, data, order }: { folder: Folder; index: number; data: Data; order: Order }) {
+function FolderGroup({
+  folder: f,
+  index,
+  data,
+  order,
+  begin,
+}: {
+  folder: Folder;
+  index: number;
+  data: Data;
+  order: Order;
+  begin: Start;
+}) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
   const [renaming, setRenaming] = useState(false);
@@ -242,26 +263,33 @@ function FolderGroup({ folder: f, index, data, order }: { folder: Folder; index:
         {routines.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("routines.emptyFolder")}</p>
         ) : (
-          routines.map((r) => <RoutineCard key={r.id} routine={r} data={data} order={order} />)
+          routines.map((r) => <RoutineCard key={r.id} routine={r} data={data} order={order} begin={begin} />)
         )}
       </CollapsibleContent>
     </Collapsible>
   );
 }
 
-function RoutineCard({ routine: r, data, order }: { routine: Routine; data: Data; order: Order }) {
-  const { t } = useTranslation();
+function RoutineCard({ routine: r, data, order, begin }: { routine: Routine; data: Data; order: Order; begin: Start }) {
+  const { t, i18n } = useTranslation();
   const group = data.routines.filter((x) => x.folderId === r.folderId);
   const i = group.indexOf(r);
   const names = r.exercises.map((e) => e.exercise?.name).filter(Boolean);
   return (
     <div className="flex items-start gap-1 rounded-xl border bg-card p-3">
-      <Link to={`/routines/${r.id}`} className="min-w-0 flex-1">
-        <p className="truncate font-medium">{r.name}</p>
-        <p className="line-clamp-2 text-sm text-muted-foreground">
-          {names.length ? names.join(", ") : t("routines.noExercises")}
-        </p>
-      </Link>
+      <div className="min-w-0 flex-1">
+        <Link to={`/routines/${r.id}`} className="block">
+          <p className="truncate font-medium">{r.name}</p>
+          {r.lastDoneAt && <p className="text-xs text-muted-foreground">{t("routines.lastDone", { when: ago(r.lastDoneAt, i18n.language) })}</p>}
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {names.length ? names.join(", ") : t("routines.noExercises")}
+          </p>
+        </Link>
+        <Button size="sm" className="mt-2" disabled={r.exercises.length === 0} onClick={() => begin(r)}>
+          <Play data-icon="inline-start" />
+          {t("routines.start")}
+        </Button>
+      </div>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon-sm" aria-label={t("routines.routineMenu", { name: r.name })}>
@@ -285,6 +313,67 @@ function RoutineCard({ routine: r, data, order }: { routine: Routine; data: Data
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+    </div>
+  );
+}
+
+/** "3 days ago", "yesterday", "today" in the app's language. */
+function ago(iso: string, lang: string): string {
+  const day = 86_400_000;
+  const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(iso).setHours(0, 0, 0, 0)) / day);
+  return new Intl.RelativeTimeFormat(lang, { numeric: "auto" }).format(-days, "day");
+}
+
+/** Finished workouts still on their way to the server. */
+function Outbox() {
+  const { t } = useTranslation();
+  const me = useMe();
+  const { pending, state } = useOutbox(me.id);
+  if (pending.length === 0) return null;
+  return (
+    <div className="mb-4 space-y-2" aria-live="polite">
+      {pending.map((f) => {
+        const err = f.error as { code?: string; message?: string; params?: Record<string, string | number> } | string | undefined;
+        return (
+          <div key={f.id} className="flex items-center gap-3 rounded-xl border bg-card p-3 text-sm">
+            {err ? <CloudAlert className="size-5 shrink-0 text-destructive" /> : state === "saving" ? <Spinner /> : <CloudOff className="size-5 shrink-0 text-muted-foreground" />}
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{f.workout.title}</p>
+              <p className="text-muted-foreground">
+                {err
+                  ? errorMessage(typeof err === "string" ? err : new ApiError(400, err.message ?? "", err.code, err.params))
+                  : t(state === "saving" ? "live.saving" : "live.willRetry")}
+              </p>
+            </div>
+            {err ? (
+              <>
+                <Button size="sm" variant="outline" onClick={() => retryFinish(f.id, me.id)}>
+                  {t("common.retry")}
+                </Button>
+                <ConfirmDialog
+                  trigger={
+                    <Button size="icon-sm" variant="ghost" aria-label={t("live.discardFinish")}>
+                      <Trash2 />
+                    </Button>
+                  }
+                  title={t("live.discardFinish")}
+                  description={t("live.discardFinishDescription")}
+                  confirmLabel={t("live.discardConfirm")}
+                  cancelLabel={t("common.cancel")}
+                  destructive
+                  onConfirm={() => discardFinish(f.id)}
+                />
+              </>
+            ) : (
+              state === "retry" && (
+                <Button size="sm" variant="outline" onClick={() => retryFinish(f.id, me.id)}>
+                  {t("common.retry")}
+                </Button>
+              )
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
