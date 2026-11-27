@@ -1,6 +1,7 @@
 import { Dumbbell } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@kipit-labs/kipitidy/chart";
 import { EmptyState } from "@kipit-labs/kipitidy/empty-state";
@@ -147,7 +148,14 @@ export function History({ kind, sessions, unit }: { kind: ExerciseKind; sessions
         );
         return (
           <li key={s.workoutId}>
-            <Section title={s.title} description={longDate(s.startedAt)}>
+            <Section
+              title={
+                <Link to={`/workouts/${s.workoutId}`} className="underline-offset-4 hover:underline">
+                  {s.title}
+                </Link>
+              }
+              description={longDate(s.startedAt)}
+            >
               {s.records.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {s.records.map((r) => (

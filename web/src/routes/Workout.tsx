@@ -8,6 +8,7 @@ import {
   CloudAlert,
   CloudOff,
   FolderPlus,
+  History,
   Library,
   MoreVertical,
   Pencil,
@@ -119,7 +120,15 @@ export function Workout() {
         </div>
       )}
 
-      <Link to="/exercises" className="mt-8 flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted">
+      <Link to="/history" className="mt-8 flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted">
+        <IconTile icon={History} />
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">{t("workout.history")}</p>
+          <p className="text-sm text-muted-foreground">{t("workout.historyDescription")}</p>
+        </div>
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      </Link>
+      <Link to="/exercises" className="mt-3 flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted">
         <IconTile icon={Library} />
         <div className="min-w-0 flex-1">
           <p className="font-medium">{t("workout.library")}</p>

@@ -33,7 +33,9 @@
   "workout": {
     "library": "Bibliothèque d'exercices",
     "libraryDescription": "Parcourez les exercices et créez les vôtres.",
-    "startEmpty": "Démarrer une séance vide"
+    "startEmpty": "Démarrer une séance vide",
+    "history": "Historique",
+    "historyDescription": "Vos séances passées, à revoir ou corriger."
   },
   "progress": {
     "emptyTitle": "Aucun progrès à afficher",
@@ -284,7 +286,13 @@
     "discardFinishDescription": "Elle n'a jamais été enregistrée : ses séries seront perdues.",
     "newRecords_one": "Nouveau record",
     "newRecords_many": "{{count}} nouveaux records",
-    "newRecords_other": "{{count}} nouveaux records"
+    "newRecords_other": "{{count}} nouveaux records",
+    "saveEdit": "Enregistrer les modifications",
+    "editTitle": "Modifier la séance",
+    "editing": "Modification : {{title}}",
+    "discardEdit": "Annuler les modifications",
+    "discardEditTitle": "Annuler les modifications ?",
+    "discardEditDescription": "Vos changements ne seront pas enregistrés."
   },
   "errors": {
     "generic": "Une erreur est survenue",
@@ -357,5 +365,24 @@
     "date": "Date",
     "noHistory": "Pas encore fait",
     "noHistoryDescription": "Records et historique apparaissent après une séance avec cet exercice."
+  },
+  "history": {
+    "title": "Historique",
+    "emptyTitle": "Aucune séance",
+    "emptyDescription": "Les séances terminées apparaissent ici.",
+    "more": "Voir plus",
+    "records_one": "{{count}} record",
+    "records_many": "{{count}} records",
+    "records_other": "{{count}} records",
+    "exerciseSets_one": "{{name}} · {{count}} série",
+    "exerciseSets_many": "{{name}} · {{count}} séries",
+    "exerciseSets_other": "{{name}} · {{count}} séries",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "deleteTitle": "Supprimer {{title}} ?",
+    "deleteDescription": "Ses séries et ses records disparaissent. Les records des séances suivantes sont recalculés.",
+    "deleteConfirm": "Supprimer",
+    "deleteFailed": "Impossible de supprimer la séance",
+    "deleted": "Séance supprimée"
   }
 }

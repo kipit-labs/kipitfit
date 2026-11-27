@@ -9,7 +9,7 @@ import { cn } from "cn";
 import { useMe } from "@/lib/auth";
 import { routinesQuery } from "@/lib/routines";
 import { formatDuration } from "@/lib/units";
-import type { Live } from "@/live/model";
+import { elapsedS, type Live } from "@/live/model";
 import { flush, onFinishSaved, useLive } from "@/live/store";
 import { useNow } from "@/live/useNow";
 
@@ -25,9 +25,9 @@ const tabs = [
 /** The signed-in app: one screen at a time over a bottom tab bar. */
 export function Layout() {
   const { t } = useTranslation();
-  // The exercise library and the routine editor are reached from the Workout tab.
+  // The exercise library, the routine editor and the history are reached from the Workout tab.
   const path = useLocation().pathname;
-  const inLibrary = path.startsWith("/exercises") || path.startsWith("/routines") || path === "/live";
+  const inLibrary = ["/exercises", "/routines", "/live", "/history", "/workouts"].some((p) => path.startsWith(p));
   const me = useMe();
   const live = useLive(me.id);
   const qc = useQueryClient();
@@ -37,6 +37,7 @@ export function Layout() {
       toast.success(t("live.saved"));
       void qc.invalidateQueries({ queryKey: routinesQuery.queryKey });
       void qc.invalidateQueries({ queryKey: ["progress"] });
+      void qc.invalidateQueries({ queryKey: ["workouts"] });
     });
     const send = () => void flush(me.id);
     send();
@@ -89,8 +90,10 @@ function InProgress({ live }: { live: Live }) {
   return (
     <Link to="/live" className="block border-t bg-primary px-4 py-2 text-primary-foreground">
       <span className="mx-auto flex max-w-lg items-center gap-2 text-sm">
-        <span className="min-w-0 flex-1 truncate font-medium">{live.routine?.name ?? t("live.defaultTitle")}</span>
-        <span className="tabular-nums">{formatDuration(Math.max(0, Math.floor((now - live.startedAt) / 1000)))}</span>
+        <span className="min-w-0 flex-1 truncate font-medium">
+          {live.edit ? t("live.editing", { title: live.edit.title }) : (live.routine?.name ?? t("live.defaultTitle"))}
+        </span>
+        <span className="tabular-nums">{formatDuration(elapsedS(live, now))}</span>
         <span className="font-medium">{t("live.resume")}</span>
         <ChevronRight className="size-4" aria-hidden />
       </span>

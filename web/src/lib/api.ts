@@ -164,6 +164,19 @@ export type ExerciseSession = {
   records: PersonalRecord[];
 };
 
+/** A saved workout, with the records it beat. */
+export type LoggedWorkout = {
+  id: string;
+  title: string;
+  notes: string;
+  routineId?: string;
+  startedAt: string;
+  endedAt: string;
+  volumeG: number;
+  exercises: { exerciseId: string; superset?: string; notes: string; exercise?: ExerciseSummary; sets: LoggedSet[] }[];
+  records: PersonalRecord[];
+};
+
 export type ExerciseProgress = {
   records: PersonalRecord[];
   /** Heaviest weight lifted for at least reps reps, 1 to 12. */
@@ -196,7 +209,11 @@ export const api = {
   createFolder: (name: string) => send<Folder>("POST", "/folders", { name }),
   renameFolder: (id: string, name: string) => send<Folder>("PATCH", `/folders/${id}`, { name }),
   deleteFolder: (id: string) => send<void>("DELETE", `/folders/${id}`),
-  putWorkout: (id: string, b: WorkoutBody) => send<unknown>("PUT", `/workouts/${id}`, b),
+  putWorkout: (id: string, b: WorkoutBody) => send<LoggedWorkout>("PUT", `/workouts/${id}`, b),
+  workouts: (after = "") =>
+    request<{ workouts: LoggedWorkout[]; next?: string }>(`/workouts${after ? `?after=${encodeURIComponent(after)}` : ""}`),
+  workout: (id: string) => request<LoggedWorkout>(`/workouts/${id}`),
+  deleteWorkout: (id: string) => send<void>("DELETE", `/workouts/${id}`),
   bests: (exerciseIds: string[]) =>
     request<Record<string, Partial<Record<RecordKind, number>>>>(`/bests?exercise=${exerciseIds.map(encodeURIComponent).join(",")}`),
   exerciseProgress: (id: string) => request<ExerciseProgress>(`/exercises/${id}/progress`),
