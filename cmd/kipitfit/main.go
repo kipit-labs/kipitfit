@@ -11,13 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kipit-labs/kipitfit/internal/api"
 	"github.com/kipit-labs/kipitfit/internal/config"
+	httpdelivery "github.com/kipit-labs/kipitfit/internal/delivery/http"
 	"github.com/kipit-labs/kipitfit/internal/domain"
-	"github.com/kipit-labs/kipitfit/internal/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/media"
 	"github.com/kipit-labs/kipitfit/internal/infrastructure/security"
-	"github.com/kipit-labs/kipitfit/internal/media"
-	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/sqlite"
 	"github.com/kipit-labs/kipitfit/internal/usecase/auth"
 	"github.com/kipit-labs/kipitfit/internal/usecase/exercises"
 	librarysvc "github.com/kipit-labs/kipitfit/internal/usecase/library"
@@ -127,7 +127,7 @@ func wire(ctx context.Context, cfg config.Config, st *sqlite.Store, m domain.Med
 	ex := exercises.NewService(st)
 	rec := records.NewService(st, ex)
 	mux := http.NewServeMux()
-	mux.Handle("/api/", api.New(api.Services{
+	mux.Handle("/api/", httpdelivery.New(httpdelivery.Services{
 		Auth:      authSvc,
 		Exercises: ex,
 		Library:   lib,
@@ -136,5 +136,5 @@ func wire(ctx context.Context, cfg config.Config, st *sqlite.Store, m domain.Med
 		Workouts:  workouts.NewService(st, st, ex, rec),
 	}, cfg, log))
 	mux.Handle("/", web.Handler())
-	return api.RealIP(cfg.RealIPHeader, cfg.TrustedProxies)(api.SecureHeaders(mux, cfg.CookieSecure)), lib, nil
+	return httpdelivery.RealIP(cfg.RealIPHeader, cfg.TrustedProxies)(httpdelivery.SecureHeaders(mux, cfg.CookieSecure)), lib, nil
 }

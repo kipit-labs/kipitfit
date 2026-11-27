@@ -17,9 +17,9 @@ import (
 	"time"
 
 	"github.com/kipit-labs/kipitfit/internal/config"
-	"github.com/kipit-labs/kipitfit/internal/exercisedb"
-	"github.com/kipit-labs/kipitfit/internal/pack"
-	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/exercisedb"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/pack"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/sqlite"
 	librarysvc "github.com/kipit-labs/kipitfit/internal/usecase/library"
 )
 

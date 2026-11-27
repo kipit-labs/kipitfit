@@ -151,5 +151,5 @@ Playwright in its Docker image: WebKit at iPhone size and desktop Chromium, on t
 ## License
 
 MIT. The built-in exercise library comes from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by
-yuhonas (Unlicense); see [internal/exercisedb/NOTICE.md](internal/exercisedb/NOTICE.md). Imported packs keep their own
+yuhonas (Unlicense); see [internal/infrastructure/exercisedb/NOTICE.md](internal/infrastructure/exercisedb/NOTICE.md). Imported packs keep their own
 licences.

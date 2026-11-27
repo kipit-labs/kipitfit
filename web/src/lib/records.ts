@@ -1,7 +1,7 @@
 import type { ExerciseKind, RecordKind, SetType, Unit } from "./api";
 import { formatDuration, formatKm, formatNumber, formatWeight, weightIn } from "./units";
 
-/** The records an exercise kind keeps, in the order the page shows them; internal/core/records.go has the same. */
+/** The records an exercise kind keeps, in the order the page shows them; internal/usecase/records/records.go has the same. */
 export function recordKinds(k: ExerciseKind): RecordKind[] {
   switch (k) {
     case "weight_reps":
@@ -85,7 +85,7 @@ const summed = (rk: RecordKind) => rk === "session_volume" || rk === "session_re
 export type Beaten = { kind: RecordKind; value: number; previous: number; /** -1 for a workout total. */ set: number };
 
 /**
- * The records one workout's sets of an exercise beat, given the bests before it, as internal/core/records.go
+ * The records one workout's sets of an exercise beat, given the bests before it, as internal/usecase/records/records.go
  * works them out: its best set (the first on a tie) or its total, strictly above the best. An exercise without
  * bests was never done, and a first workout sets none.
  */

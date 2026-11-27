@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/kipit-labs/kipitfit/internal/domain"
-	"github.com/kipit-labs/kipitfit/internal/pack"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/pack"
 )
 
 // A made-up pack in RepDB's free-tier shape; no real RepDB data is in the repo.

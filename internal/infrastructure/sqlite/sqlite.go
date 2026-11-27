@@ -17,7 +17,6 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/domain"
 	"github.com/kipit-labs/kipitfit/internal/ids"
-	"github.com/kipit-labs/kipitfit/internal/sqlitedb"
 )
 
 //go:embed migrations/*.sql
@@ -41,7 +40,7 @@ func Open(ctx context.Context, path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	sqldb, err := sqlitedb.Open(ctx, path, sub)
+	sqldb, err := openDB(ctx, path, sub)
 	if err != nil {
 		return nil, err
 	}

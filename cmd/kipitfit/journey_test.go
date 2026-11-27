@@ -18,7 +18,7 @@ import (
 
 	"github.com/kipit-labs/kipitfit/internal/config"
 	"github.com/kipit-labs/kipitfit/internal/domain"
-	"github.com/kipit-labs/kipitfit/internal/store/sqlite"
+	"github.com/kipit-labs/kipitfit/internal/infrastructure/sqlite"
 	librarysvc "github.com/kipit-labs/kipitfit/internal/usecase/library"
 )
 
