@@ -74,3 +74,13 @@ export const test = base.extend<Fixtures & { errors: string[] }>({
 export function tab(page: Page, name: "Feed" | "Workout" | "Progress" | "Me") {
   return page.getByRole("navigation").getByRole("link", { name, exact: true });
 }
+
+/** Adds one exercise through the picker, the routine editor's or the live workout's. */
+export async function addExercise(page: Page, name: string, muscle: string) {
+  await page.getByRole("button", { name: "Add exercises" }).click();
+  const picker = page.getByRole("dialog", { name: "Add exercises" });
+  await picker.getByRole("searchbox", { name: "Search exercises" }).fill(name);
+  await picker.getByRole("button", { name: new RegExp(`^${name} ${muscle} ·`) }).click();
+  await picker.getByRole("button", { name: "Add 1 exercise" }).click();
+  await expect(picker).toBeHidden();
+}

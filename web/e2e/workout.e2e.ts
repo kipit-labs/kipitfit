@@ -1,16 +1,4 @@
-import type { Page } from "@playwright/test";
-
-import { expect, tab, test } from "./fixtures";
-
-/** Adds one exercise through the picker, the routine editor's or the live workout's. */
-async function addExercise(page: Page, name: string, muscle: string) {
-  await page.getByRole("button", { name: "Add exercises" }).click();
-  const picker = page.getByRole("dialog", { name: "Add exercises" });
-  await picker.getByRole("searchbox", { name: "Search exercises" }).fill(name);
-  await picker.getByRole("button", { name: new RegExp(`^${name} ${muscle} ·`) }).click();
-  await picker.getByRole("button", { name: "Add 1 exercise" }).click();
-  await expect(picker).toBeHidden();
-}
+import { addExercise, expect, tab, test } from "./fixtures";
 
 test("plan a routine, then train it live from start to finish", async ({ page, account: _ }) => {
   await page.getByRole("link", { name: "New routine" }).click();
